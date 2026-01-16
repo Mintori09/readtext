@@ -18,7 +18,7 @@
       }
     ],
     "security": {
-      "csp": "default-src 'self'; img-src 'self' asset: https://asset.localhost; connect-src 'self' ipc:;",
+      "csp": "default-src 'self'; img-src 'self' asset: https://asset.localhost https://* http://* data:; connect-src 'self' ipc:;",
       "assetProtocol": {
         "enable": true,
         "scope": ["**/**"]
