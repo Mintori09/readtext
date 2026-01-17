@@ -1,0 +1,82 @@
+@media print {
+  .status-bar,
+  .print-btn,
+  .file-icon {
+    display: none !important;
+  }
+
+  @page {
+    size: A4;
+    margin: 1.5cm;
+  }
+
+  body {
+    background: white !important;
+    font-size: 10pt;
+    line-height: 1.4;
+    color: #000;
+  }
+
+  .markdown-container {
+    width: 100% !important;
+    max-width: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  .prose-wrapper {
+    font-size: 10pt;
+  }
+
+  h1 {
+    font-size: 18pt;
+    margin-top: 0;
+  }
+  h2 {
+    font-size: 15pt;
+    border-bottom: 1px solid #eee;
+  }
+  h3 {
+    font-size: 13pt;
+  }
+
+  a[href]:after {
+    content: " (" attr(href) ")";
+    font-size: 8pt;
+    color: #666;
+  }
+
+  pre,
+  .code-block-wrapper {
+    background-color: #f9f9f9 !important;
+    border: 0.5pt solid #ddd !important;
+    font-size: 9pt !important;
+    page-break-inside: avoid;
+    border-radius: 0;
+  }
+
+  .code-lang-tag {
+    font-weight: bold;
+    border-bottom: 0.5pt solid #ddd;
+    margin-bottom: 5px;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 9pt;
+  }
+
+  th,
+  td {
+    border: 0.5pt solid #ccc !important;
+    padding: 4pt !important;
+  }
+
+  img {
+    max-width: 80% !important;
+    display: block;
+    margin: 10px auto;
+    page-break-inside: avoid;
+  }
+}

@@ -7,10 +7,12 @@ declare global {
   }
 }
 
-export function useVim() {
+export function useVim(ref: React.RefObject<HTMLElement | null>) {
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // 1. Bỏ qua nếu đang gõ vào ô nhập liệu
+      const element = ref.current;
+      if (!element) return;
+
       const activeEl = document.activeElement;
       const isTyping =
         activeEl &&
@@ -19,66 +21,48 @@ export function useVim() {
           (activeEl as HTMLElement).isContentEditable);
       if (isTyping) return;
 
-      // 2. Cấu hình các thông số cuộn
       const scrollAmount = 100;
-      const halfPage = window.innerHeight / 2;
+      const halfPage = element.clientHeight / 2;
 
       switch (e.key) {
-        // Cuộn từng dòng
         case "j":
-          window.scrollBy({ top: scrollAmount, behavior: "smooth" });
+          element.scrollBy({ top: scrollAmount, behavior: "smooth" });
           break;
         case "k":
-          window.scrollBy({ top: -scrollAmount, behavior: "smooth" });
+          element.scrollBy({ top: -scrollAmount, behavior: "smooth" });
           break;
-
-        // Cuộn nửa trang (như Ctrl+u / Ctrl+d nhưng map sang phím thường cho tiện)
         case "d":
-          window.scrollBy({ top: halfPage, behavior: "smooth" });
+          element.scrollBy({ top: halfPage, behavior: "smooth" });
           break;
         case "u":
-          window.scrollBy({ top: -halfPage, behavior: "smooth" });
+          element.scrollBy({ top: -halfPage, behavior: "smooth" });
           break;
-
-        // Về đầu trang (gg)
         case "g":
           if (window.lastKeyPressed === "g") {
-            window.scrollTo({ top: 0, behavior: "smooth" });
-            window.lastKeyPressed = ""; // Reset sau khi thực hiện
+            element.scrollTo({ top: 0, behavior: "smooth" });
+            window.lastKeyPressed = "";
           } else {
             window.lastKeyPressed = "g";
-            // Xóa trạng thái chờ 'g' sau 500ms nếu không nhấn tiếp g thứ hai
             window.clearTimeout(window.lastKeyTimeout);
             window.lastKeyTimeout = window.setTimeout(() => {
               window.lastKeyPressed = "";
             }, 500);
-            return; // Thoát để không ghi đè lastKeyPressed ở cuối
+            return;
           }
           break;
-
-        // Xuống cuối trang (G)
         case "G":
-          window.scrollTo({
-            top: document.body.scrollHeight,
+          element.scrollTo({
+            top: element.scrollHeight,
             behavior: "smooth",
           });
           break;
-
-        // Quay lại trang trước (như phím Back trong trình duyệt)
-        case "H": // Shift + h
+        case "H":
           window.history.back();
           break;
-
-        // Tiến tới trang sau (như phím Forward)
-        case "L": // Shift + l
+        case "L":
           window.history.forward();
           break;
-
-        default:
-          break;
       }
-
-      // Lưu phím vừa nhấn để xử lý các tổ hợp như 'gg'
       window.lastKeyPressed = e.key;
     };
 
@@ -87,5 +71,5 @@ export function useVim() {
       window.removeEventListener("keydown", handleKeyDown);
       window.clearTimeout(window.lastKeyTimeout);
     };
-  }, []);
+  }, [ref]);
 }

@@ -1,12 +1,79 @@
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
 use gtk::prelude::GtkWindowExt;
 use notify::{Config, RecursiveMode, Watcher};
+use serde_json::{json, Value};
 use std::fs;
 use std::path::Path;
+use std::path::PathBuf;
 use tauri::Manager;
 use tauri::{Emitter, Window};
 use tauri_plugin_cli::CliExt;
 use walkdir::WalkDir;
+
+#[tauri::command]
+fn get_user_css(app_handle: tauri::AppHandle) -> Result<String, String> {
+    let mut path = app_handle
+        .path()
+        .app_config_dir()
+        .map_err(|e| e.to_string())?;
+
+    if !path.exists() {
+        fs::create_dir_all(&path).map_err(|e| e.to_string())?;
+    }
+
+    path.push("style.css");
+
+    if path.exists() {
+        fs::read_to_string(path).map_err(|e| e.to_string())
+    } else {
+        Ok("".to_string())
+    }
+}
+// Hàm lấy đường dẫn file config (Ví dụ: ~/.config/your-app-name/settings.json)
+fn get_config_path(app_handle: tauri::AppHandle) -> PathBuf {
+    let mut path = app_handle
+        .path()
+        .app_config_dir()
+        .unwrap_or_else(|_| PathBuf::from("."));
+    if !path.exists() {
+        fs::create_dir_all(&path).unwrap();
+    }
+    path.push("settings.json");
+    path
+}
+
+#[tauri::command]
+async fn save_cache(app_handle: tauri::AppHandle, key: String, value: Value) -> Result<(), String> {
+    let path = get_config_path(app_handle);
+
+    let mut data = if path.exists() {
+        let content = fs::read_to_string(&path).map_err(|e| e.to_string())?;
+        serde_json::from_str(&content).unwrap_or(json!({}))
+    } else {
+        json!({})
+    };
+
+    data[key] = value;
+
+    fs::write(path, serde_json::to_string_pretty(&data).unwrap()).map_err(|e| e.to_string())?;
+    Ok(())
+}
+
+#[tauri::command]
+async fn get_cache(app_handle: tauri::AppHandle, key: String) -> Result<Value, String> {
+    let path = get_config_path(app_handle);
+    if !path.exists() {
+        return Ok(Value::Null);
+    }
+
+    let content = fs::read_to_string(path).map_err(|e| e.to_string())?;
+    let data: Value = serde_json::from_str(&content).map_err(|e| e.to_string())?;
+
+    Ok(data[key].clone())
+}
+
+// Đừng quên đăng ký command trong main()
+// .invoke_handler(tauri::generate_handler![save_cache, get_cache, ...])
 
 #[tauri::command]
 fn resolve_image_path(current_file_path: String, asset_name: String) -> Option<String> {
@@ -17,7 +84,7 @@ fn resolve_image_path(current_file_path: String, asset_name: String) -> Option<S
         return Some(relative_path.to_string_lossy().into_owned());
     }
 
-    let global_assets_path = "/home/mintori/Documents/[2] Obsidian/_image";
+    let global_assets_path = "/home/mintori/Documents/[2] Obsidian/";
 
     for entry in WalkDir::new(global_assets_path)
         .into_iter()
@@ -64,15 +131,22 @@ fn start_watch(window: Window, path: String) {
         let (tx, rx) = std::sync::mpsc::channel();
         let mut watcher = notify::RecommendedWatcher::new(tx, Config::default()).unwrap();
 
-        watcher
-            .watch(Path::new(&path), RecursiveMode::NonRecursive)
-            .unwrap();
+        let path_buf = Path::new(&path);
+        let parent = path_buf.parent().unwrap();
+
+        watcher.watch(parent, RecursiveMode::NonRecursive).unwrap();
 
         for res in rx {
             match res {
-                Ok(_) => {
-                    if let Ok(content) = std::fs::read_to_string(&path) {
-                        window.emit("file-update", content).unwrap();
+                Ok(event) => {
+                    if event.paths.contains(&path_buf.to_path_buf()) {
+                        if event.kind.is_modify() {
+                            std::thread::sleep(std::time::Duration::from_millis(100));
+
+                            if let Ok(content) = std::fs::read_to_string(&path) {
+                                let _ = window.emit("file-update", content);
+                            }
+                        }
                     }
                 }
                 Err(e) => println!("watch error: {:?}", e),
@@ -122,7 +196,10 @@ pub fn run() {
             read_file,
             get_cli_file,
             close_app,
-            resolve_image_path
+            resolve_image_path,
+            save_cache,
+            get_cache,
+            get_user_css
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
