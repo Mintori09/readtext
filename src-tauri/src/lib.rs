@@ -1,4 +1,5 @@
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
+mod config;
 use gtk::prelude::GtkWindowExt;
 use notify::{Config, RecursiveMode, Watcher};
 use serde_json::{json, Value};
@@ -10,18 +11,23 @@ use tauri::{Emitter, Window};
 use tauri_plugin_cli::CliExt;
 use walkdir::WalkDir;
 
-#[tauri::command]
-fn get_user_css(app_handle: tauri::AppHandle) -> Result<String, String> {
+fn get_path(app_handle: tauri::AppHandle, file: &str) -> PathBuf {
     let mut path = app_handle
         .path()
         .app_config_dir()
-        .map_err(|e| e.to_string())?;
+        .expect("Error: Critical failure retrieving app config directory");
 
     if !path.exists() {
-        fs::create_dir_all(&path).map_err(|e| e.to_string())?;
+        let _ = fs::create_dir_all(&path);
     }
 
-    path.push("style.css");
+    path.push(file);
+    path
+}
+
+#[tauri::command]
+fn get_user_css(app_handle: tauri::AppHandle) -> Result<String, String> {
+    let path = get_path(app_handle, "style.css");
 
     if path.exists() {
         fs::read_to_string(path).map_err(|e| e.to_string())
@@ -29,17 +35,9 @@ fn get_user_css(app_handle: tauri::AppHandle) -> Result<String, String> {
         Ok("".to_string())
     }
 }
-// Hàm lấy đường dẫn file config (Ví dụ: ~/.config/your-app-name/settings.json)
+
 fn get_config_path(app_handle: tauri::AppHandle) -> PathBuf {
-    let mut path = app_handle
-        .path()
-        .app_config_dir()
-        .unwrap_or_else(|_| PathBuf::from("."));
-    if !path.exists() {
-        fs::create_dir_all(&path).unwrap();
-    }
-    path.push("settings.json");
-    path
+    get_path(app_handle, "settings.json")
 }
 
 #[tauri::command]
@@ -72,11 +70,14 @@ async fn get_cache(app_handle: tauri::AppHandle, key: String) -> Result<Value, S
     Ok(data[key].clone())
 }
 
-// Đừng quên đăng ký command trong main()
 // .invoke_handler(tauri::generate_handler![save_cache, get_cache, ...])
 
 #[tauri::command]
-fn resolve_image_path(current_file_path: String, asset_name: String) -> Option<String> {
+fn resolve_image_path(
+    app_handle: tauri::AppHandle,
+    current_file_path: String,
+    asset_name: String,
+) -> Option<String> {
     let base_dir = Path::new(&current_file_path).parent()?;
     let relative_path = base_dir.join(&asset_name);
 
@@ -84,23 +85,31 @@ fn resolve_image_path(current_file_path: String, asset_name: String) -> Option<S
         return Some(relative_path.to_string_lossy().into_owned());
     }
 
-    let global_assets_path = "/home/mintori/Documents/[2] Obsidian/";
+    let config_path = get_path(app_handle, "config.json");
 
-    for entry in WalkDir::new(global_assets_path)
-        .into_iter()
-        .filter_map(|e| e.ok())
-    {
-        if entry.file_name().to_string_lossy() == asset_name {
-            return Some(entry.path().to_string_lossy().into_owned());
+    let config_data = fs::read_to_string(&config_path).ok()?;
+    let config: crate::config::Config = serde_json::from_str(&config_data).ok()?;
+
+    for global_path in config.search_paths {
+        for entry in WalkDir::new(global_path)
+            .max_depth(5)
+            .into_iter()
+            .filter_map(|e| e.ok())
+        {
+            if entry.file_name().to_string_lossy() == asset_name {
+                return Some(entry.path().to_string_lossy().into_owned());
+            }
         }
     }
 
     None
 }
+
 #[tauri::command]
 fn close_app(app: tauri::AppHandle) {
     app.exit(0);
 }
+
 #[tauri::command]
 fn get_cli_file(app: tauri::AppHandle) -> Option<String> {
     match app.cli().matches() {
@@ -139,13 +148,11 @@ fn start_watch(window: Window, path: String) {
         for res in rx {
             match res {
                 Ok(event) => {
-                    if event.paths.contains(&path_buf.to_path_buf()) {
-                        if event.kind.is_modify() {
-                            std::thread::sleep(std::time::Duration::from_millis(100));
+                    if event.paths.contains(&path_buf.to_path_buf()) && event.kind.is_modify() {
+                        std::thread::sleep(std::time::Duration::from_millis(100));
 
-                            if let Ok(content) = std::fs::read_to_string(&path) {
-                                let _ = window.emit("file-update", content);
-                            }
+                        if let Ok(content) = std::fs::read_to_string(&path) {
+                            let _ = window.emit("file-update", content);
                         }
                     }
                 }
@@ -203,4 +210,13 @@ pub fn run() {
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
+}
+
+#[test]
+fn read_config_test() {
+    let config_data = fs::read_to_string("/home/mintori/.config/readtext/config.json")
+        .ok()
+        .unwrap();
+    let config: crate::config::Config = serde_json::from_str(&config_data).ok().unwrap();
+    println!("{:?}", config);
 }
