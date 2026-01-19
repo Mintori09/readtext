@@ -81,7 +81,7 @@ export const TableOfContents = ({
       </button>
 
       <nav className={`toc-sidebar ${isVisible ? "show" : "hide"}`}>
-        <div className="toc-title">MỤC LỤC</div>
+        <div className="toc-title">Table of content</div>
         <div className="toc-scroll-area">
           <ul>
             {headings.map((h, i) => (

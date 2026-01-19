@@ -110,25 +110,38 @@ fn close_app(app: tauri::AppHandle) {
     app.exit(0);
 }
 
+#[cfg(not(any(target_os = "android", target_os = "ios")))]
 #[tauri::command]
 fn get_cli_file(app: tauri::AppHandle) -> Option<String> {
     match app.cli().matches() {
         Ok(matches) => {
+            let mut file_path = None;
+
             if let Some(data) = matches.args.get("path") {
-                if let Some(val) = data.value.as_str() {
-                    return Some(val.to_string());
-                }
-            }
-            if !matches.args.is_empty() {
+                file_path = data.value.as_str().map(|s| s.to_string());
+            } else if !matches.args.is_empty() {
                 for (_, arg) in matches.args {
                     if let Some(val) = arg.value.as_str() {
                         if val.ends_with(".md") {
-                            return Some(val.to_string());
+                            file_path = Some(val.to_string());
+                            break;
                         }
                     }
                 }
             }
-            None
+
+            if let Some(ref path_str) = file_path {
+                if let Some(window) = app.get_webview_window("main") {
+                    let file_name = Path::new(path_str)
+                        .file_name()
+                        .and_then(|n| n.to_str())
+                        .unwrap_or(path_str);
+
+                    let _ = window.set_title(file_name);
+                }
+            }
+
+            file_path
         }
         Err(_) => None,
     }
@@ -177,6 +190,8 @@ fn read_file(path: String) -> Result<String, String> {
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+        .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_cli::init())
         .plugin(tauri_plugin_opener::init())
         .setup(|app| {

@@ -3,24 +3,34 @@ import { invoke } from "@tauri-apps/api/core";
 
 export const useTheme = () => {
   useEffect(() => {
+    const USER_STYLE_ID = "user-override-css";
+
     const applyTheme = async () => {
       try {
-        const userCss = await invoke<string | null>("get_user_css");
-        const USER_STYLE_ID = "user-override-css";
-
-        document.getElementById(USER_STYLE_ID)?.remove();
+        const userCss = await invoke<string>("get_user_css");
 
         if (userCss && userCss.trim().length > 0) {
-          const style = document.createElement("style");
-          style.id = USER_STYLE_ID;
-          style.textContent = userCss;
+          let styleEl = document.getElementById(
+            USER_STYLE_ID,
+          ) as HTMLStyleElement | null;
 
-          document.head.appendChild(style);
+          if (!styleEl) {
+            styleEl = document.createElement("style");
+            styleEl.id = USER_STYLE_ID;
+            document.head.appendChild(styleEl);
+          }
+
+          styleEl.textContent = userCss;
+        } else {
+          document.getElementById(USER_STYLE_ID)?.remove();
         }
       } catch (err) {
-        console.error("Failed to load user CSS:", err);
+        console.error("Failed to load user CSS from Tauri:", err);
       }
     };
+
     applyTheme();
+
+    return () => {};
   }, []);
 };
