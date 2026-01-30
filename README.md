@@ -1,35 +1,40 @@
 # ReadText
 
-**ReadText** là một trình xem tài liệu Markdown tối giản, hiệu suất cao được xây dựng trên **Tauri v2** và **React**. Ứng dụng được thiết kế đặc biệt cho người dùng Linux (Arch Linux/KDE) muốn có một trải nghiệm đọc tài liệu nhanh chóng, hỗ trợ điều hướng kiểu Vim và tương thích tốt với hệ sinh thái Obsidian.
+**ReadText** is a minimalist, high-performance Markdown document viewer built with **Tauri v2** and **React**. Specifically tailored for Linux users (Arch Linux/KDE), it offers a lightning-fast reading experience, Vim-style navigation, and seamless compatibility with the Obsidian ecosystem.
 
-![image](./image/demo.png)
+---
 
-## Tính năng nổi bật
+## Key Features
 
-- **Vim-mode Navigation**: Điều hướng tài liệu bằng các phím `h`, `j`, `k`, `l`, `g`, `G`, `u`, `d` mà không cần dùng chuột.
-- **High-Contrast Light Mode**: Giao diện sáng với độ tương phản cao, tối ưu hóa hiển thị mã nguồn (Syntax Highlighting) giúp đọc nội dung rõ nét.
-- **Wiki-links & Obsidian Support**: Hỗ trợ cú pháp `![[filename]]`. Tự động quét và tìm kiếm hình ảnh trong thư mục hiện tại và các thư mục tài nguyên (`attachments`).
-- **Live Reload**: Tự động cập nhật giao diện ngay lập tức khi file Markdown nguồn thay đổi (sử dụng Rust `notify`).
-- **CLI Integration**: Mở file trực tiếp từ Terminal thông qua tham số dòng lệnh.
-- **Asset Protocol**: Sử dụng giao thức bảo mật của Tauri để hiển thị hình ảnh cục bộ mà không làm giảm hiệu suất hệ thống.
+- **Vim-mode Navigation**: Navigate documents effortlessly using `h`, `j`, `k`, `l`, `g`, `G`, `u`, and `d` keys—no mouse required.
+- **High-Contrast Light Mode**: A crisp, high-contrast light interface optimized with syntax highlighting for maximum readability.
+- **Wiki-links & Obsidian Support**: Full support for `![[filename]]` syntax. The app automatically scans for images in the current directory and dedicated resource folders (`attachments`).
+- **Live Reload**: Powered by Rust's `notify` crate, the UI updates instantly whenever the source Markdown file is modified.
+- **CLI Integration**: Open files directly from your terminal via command-line arguments.
+- **Asset Protocol**: Leverages Tauri’s secure custom protocol to render local images efficiently without compromising system performance.
 
-## Công nghệ sử dụng
+---
+
+## Tech Stack
 
 - **Backend**: Rust, Tauri v2, WalkDir, Notify.
 - **Frontend**: React, TypeScript, React-Markdown.
 - **Highlighter**: React Syntax Highlighter (Prism).
 
-## Cài đặt
+---
 
-### Yêu cầu hệ thống
+## Installation
+
+### System Requirements
 
 - Rust & Cargo
 - Node.js & pnpm
-- Các thư viện Webview2 (Windows) hoặc WebKit2GTK (Linux).
+- **Linux**: WebKit2GTK
+- **Windows**: WebView2
 
-### Các bước cài đặt
+### Setup Steps
 
-1. Clone repository:
+1. **Clone the repository:**
 
 ```bash
 git clone https://github.com/yourusername/readtext.git
@@ -37,66 +42,72 @@ cd readtext
 
 ```
 
-2. Cài đặt dependencies:
+2. **Install dependencies:**
 
 ```bash
 pnpm install
 
 ```
 
-3. Chạy ứng dụng ở chế độ phát triển:
+3. **Run in development mode:**
 
 ```bash
 pnpm tauri dev
 
 ```
 
-4. Build ứng dụng:
+4. **Build the application:**
 
 ```bash
 pnpm tauri build
 
 ```
 
-## Hướng dẫn sử dụng
+---
 
-### Mở file từ Terminal
+## Usage
 
-Sau khi cài đặt, bạn có thể mở bất kỳ file nào bằng lệnh:
+### Terminal Integration
+
+Once installed, you can view any file by passing the path as an argument:
 
 ```bash
-readtext /đường/dẫn/đến/file.md
+readtext /path/to/your/file.md
 
 ```
 
-### Phím tắt điều hướng (Vim-style)
+### Navigation Shortcuts (Vim-style)
 
-| Phím | Chức năng             |
-| ---- | --------------------- |
-| `j`  | Cuộn xuống            |
-| `k`  | Cuộn lên              |
-| `d`  | Cuộn xuống nửa trang  |
-| `u`  | Cuộn lên nửa trang    |
-| `gg` | Nhảy về đầu trang     |
-| `G`  | Nhảy xuống cuối trang |
+| Key  | Action         |
+| ---- | -------------- |
+| `j`  | Scroll down    |
+| `k`  | Scroll up      |
+| `d`  | Half-page down |
+| `u`  | Half-page up   |
+| `gg` | Jump to top    |
+| `G`  | Jump to bottom |
 
-### Cấu hình hình ảnh
+### Image Configuration
 
-Ứng dụng sẽ tự động tìm kiếm hình ảnh trong:
+The application automatically searches for assets in:
 
-1. Cùng thư mục với file `.md`.
-2. Thư mục con (độ sâu tối đa 3 cấp).
-3. Thư mục chỉ định trong cấu hình Rust (mặc định là thư mục Obsidian của bạn).
+1. The same directory as the `.md` file.
+2. Subdirectories (up to 3 levels deep).
+3. Specific folders defined in the Rust config (defaulted to your Obsidian vault).
 
-## Cấu hình mặc định hệ thống (Linux)
+---
 
-Để đặt ReadText làm ứng dụng mặc định cho file `.md`, hãy tạo file desktop hoặc sử dụng lệnh:
+## System Configuration (Linux)
+
+To set **ReadText** as your default Markdown viewer, create a `.desktop` file or use the following command:
 
 ```bash
 xdg-mime default com.mintori.readtext.desktop text/markdown
 
 ```
 
-## Giấy phép
+---
 
-## Dự án này được phát hành dưới giấy phép MIT.
+## License
+
+This project is released under the **MIT License**.

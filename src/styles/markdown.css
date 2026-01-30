@@ -42,7 +42,7 @@ html {
   border-radius: 10px;
 }
 li {
-  display: flex;
+  /* display: flex; */
   flex-direction: column;
   gap: 2px;
 }
@@ -309,7 +309,6 @@ div {
 }
 
 .toc-sidebar ul {
-  list-style: none;
   padding: 0;
   margin: 0;
 }
