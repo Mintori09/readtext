@@ -1,33 +1,26 @@
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
 mod config;
+mod helper;
+mod image_cache;
+use crate::helper::get_config_path;
+use crate::helper::get_path;
+use crate::image_cache::initialize_database;
+use crate::image_cache::DatabaseState;
+use crate::image_cache::{rebuild_index, resolve_image_path};
 use gtk::prelude::GtkWindowExt;
 use notify::{Config, RecursiveMode, Watcher};
 use serde_json::{json, Value};
 use std::fs;
 use std::path::Path;
-use std::path::PathBuf;
+use std::sync::Mutex;
+use std::time::Instant;
 use tauri::Manager;
 use tauri::{Emitter, Window};
 use tauri_plugin_cli::CliExt;
-use walkdir::WalkDir;
-
-fn get_path(app_handle: tauri::AppHandle, file: &str) -> PathBuf {
-    let mut path = app_handle
-        .path()
-        .app_config_dir()
-        .expect("Error: Critical failure retrieving app config directory");
-
-    if !path.exists() {
-        let _ = fs::create_dir_all(&path);
-    }
-
-    path.push(file);
-    path
-}
 
 #[tauri::command]
 fn get_user_css(app_handle: tauri::AppHandle) -> Result<String, String> {
-    let path = get_path(app_handle, "style.css");
+    let path = get_path(&app_handle, "style.css");
 
     if path.exists() {
         fs::read_to_string(path).map_err(|e| e.to_string())
@@ -36,13 +29,9 @@ fn get_user_css(app_handle: tauri::AppHandle) -> Result<String, String> {
     }
 }
 
-fn get_config_path(app_handle: tauri::AppHandle) -> PathBuf {
-    get_path(app_handle, "settings.json")
-}
-
 #[tauri::command]
 async fn save_cache(app_handle: tauri::AppHandle, key: String, value: Value) -> Result<(), String> {
-    let path = get_config_path(app_handle);
+    let path = get_config_path(&app_handle);
 
     let mut data = if path.exists() {
         let content = fs::read_to_string(&path).map_err(|e| e.to_string())?;
@@ -59,7 +48,7 @@ async fn save_cache(app_handle: tauri::AppHandle, key: String, value: Value) -> 
 
 #[tauri::command]
 async fn get_cache(app_handle: tauri::AppHandle, key: String) -> Result<Value, String> {
-    let path = get_config_path(app_handle);
+    let path = get_config_path(&app_handle);
     if !path.exists() {
         return Ok(Value::Null);
     }
@@ -71,39 +60,6 @@ async fn get_cache(app_handle: tauri::AppHandle, key: String) -> Result<Value, S
 }
 
 // .invoke_handler(tauri::generate_handler![save_cache, get_cache, ...])
-
-#[tauri::command]
-fn resolve_image_path(
-    app_handle: tauri::AppHandle,
-    current_file_path: String,
-    asset_name: String,
-) -> Option<String> {
-    let base_dir = Path::new(&current_file_path).parent()?;
-    let relative_path = base_dir.join(&asset_name);
-
-    if relative_path.exists() {
-        return Some(relative_path.to_string_lossy().into_owned());
-    }
-
-    let config_path = get_path(app_handle, "config.json");
-
-    let config_data = fs::read_to_string(&config_path).ok()?;
-    let config: crate::config::Config = serde_json::from_str(&config_data).ok()?;
-
-    for global_path in config.search_paths {
-        for entry in WalkDir::new(global_path)
-            .max_depth(5)
-            .into_iter()
-            .filter_map(|e| e.ok())
-        {
-            if entry.file_name().to_string_lossy() == asset_name {
-                return Some(entry.path().to_string_lossy().into_owned());
-            }
-        }
-    }
-
-    None
-}
 
 #[tauri::command]
 fn close_app(app: tauri::AppHandle) {
@@ -189,12 +145,13 @@ fn read_file(path: String) -> Result<String, String> {
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    let start_app = Instant::now();
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_cli::init())
         .plugin(tauri_plugin_opener::init())
-        .setup(|app| {
+        .setup(move |app| {
             #[cfg(any(
                 target_os = "linux",
                 target_os = "dragonfly",
@@ -211,6 +168,13 @@ pub fn run() {
                 gtk_window.set_titlebar(Option::<&gtk::Widget>::None);
             }
 
+            println!("Time to reach setup: {:?}", start_app.elapsed());
+            let connection = initialize_database(app.handle());
+            app.manage(DatabaseState(Mutex::new(connection)));
+
+            let start_db = Instant::now();
+            println!("DB Init took: {:?}", start_db.elapsed());
+
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
@@ -221,6 +185,7 @@ pub fn run() {
             resolve_image_path,
             save_cache,
             get_cache,
+            rebuild_index,
             get_user_css
         ])
         .run(tauri::generate_context!())

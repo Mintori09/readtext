@@ -27,6 +27,7 @@ gtk = "0.18.2"
 walkdir = "2.5.0"
 tauri-plugin-fs = "2"
 tauri-plugin-dialog = "2"
+rusqlite = { version = "0.38.0", features = ["bundled"] }
 
 [target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]
 tauri-plugin-cli = "2"
