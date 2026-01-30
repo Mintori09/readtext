@@ -7,7 +7,7 @@ use crate::helper::get_path;
 use crate::image_cache::initialize_database;
 use crate::image_cache::DatabaseState;
 use crate::image_cache::{rebuild_index, resolve_image_path};
-use gtk::prelude::GtkWindowExt;
+// use gtk::prelude::GtkWindowExt;
 use notify::{Config, RecursiveMode, Watcher};
 use serde_json::{json, Value};
 use std::fs;
@@ -152,21 +152,21 @@ pub fn run() {
         .plugin(tauri_plugin_cli::init())
         .plugin(tauri_plugin_opener::init())
         .setup(move |app| {
-            #[cfg(any(
-                target_os = "linux",
-                target_os = "dragonfly",
-                target_os = "freebsd",
-                target_os = "netbsd",
-                target_os = "openbsd"
-            ))]
-            {
-                let window = app
-                    .get_webview_window("main")
-                    .ok_or("'main' WebviewWindow not found")?;
-
-                let gtk_window = window.gtk_window()?;
-                gtk_window.set_titlebar(Option::<&gtk::Widget>::None);
-            }
+            // #[cfg(any(
+            //     target_os = "linux",
+            //     target_os = "dragonfly",
+            //     target_os = "freebsd",
+            //     target_os = "netbsd",
+            //     target_os = "openbsd"
+            // ))]
+            // {
+            //     let window = app
+            //         .get_webview_window("main")
+            //         .ok_or("'main' WebviewWindow not found")?;
+            //
+            //     let gtk_window = window.gtk_window()?;
+            //     gtk_window.set_titlebar(Option::<&gtk::Widget>::None);
+            // }
 
             println!("Time to reach setup: {:?}", start_app.elapsed());
             let connection = initialize_database(app.handle());
