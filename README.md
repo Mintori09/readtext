@@ -65,7 +65,7 @@ pnpm tauri build
 
 ## Usage
 
-### Config `~/readtext/config.json`
+### Config `~/.config/readtext/config.json`
 
 ```bash 
 {
