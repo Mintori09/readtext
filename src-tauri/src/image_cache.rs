@@ -1,11 +1,10 @@
+use crate::helper::get_config;
 use rusqlite::{params, Connection, Result, Transaction};
 use std::sync::Mutex;
 use std::time::SystemTime;
 use std::{path::Path, time::Instant};
 use tauri::{AppHandle, Manager, State};
 use walkdir::WalkDir;
-
-use crate::helper::get_config;
 
 const DATABASE_FILE_NAME: &str = "cache.db";
 const SUPPORTED_IMAGE_EXTENSIONS: [&str; 7] = ["jpg", "jpeg", "png", "gif", "webp", "svg", "bmp"];

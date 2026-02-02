@@ -4,6 +4,8 @@
 
 ---
 
+![demo](./image/demo.png)
+
 ## Key Features
 
 - **Vim-mode Navigation**: Navigate documents effortlessly using `h`, `j`, `k`, `l`, `g`, `G`, `u`, and `d` keys—no mouse required.
@@ -37,35 +39,45 @@
 1. **Clone the repository:**
 
 ```bash
-git clone https://github.com/yourusername/readtext.git
+git clone https://github.com/Mintori09/readtext.git
 cd readtext
-
 ```
 
 2. **Install dependencies:**
 
 ```bash
 pnpm install
-
 ```
 
 3. **Run in development mode:**
 
 ```bash
 pnpm tauri dev
-
 ```
 
 4. **Build the application:**
 
 ```bash
 pnpm tauri build
-
 ```
 
 ---
 
 ## Usage
+
+### Config `~/readtext/config.json`
+
+```bash 
+{
+  "search_paths": [
+    "/home/mintori/Documents/[2] Obsidian/"
+    ...
+  ]
+}
+```
+
+This is configurable image paths.
+Support markdown syntax `![]()` and `![[]]`.
 
 ### Terminal Integration
 
@@ -73,7 +85,6 @@ Once installed, you can view any file by passing the path as an argument:
 
 ```bash
 readtext /path/to/your/file.md
-
 ```
 
 ### Navigation Shortcuts (Vim-style)
@@ -94,20 +105,3 @@ The application automatically searches for assets in:
 1. The same directory as the `.md` file.
 2. Subdirectories (up to 3 levels deep).
 3. Specific folders defined in the Rust config (defaulted to your Obsidian vault).
-
----
-
-## System Configuration (Linux)
-
-To set **ReadText** as your default Markdown viewer, create a `.desktop` file or use the following command:
-
-```bash
-xdg-mime default com.mintori.readtext.desktop text/markdown
-
-```
-
----
-
-## License
-
-This project is released under the **MIT License**.

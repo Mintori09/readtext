@@ -1,0 +1,63 @@
+.titlebar {
+    height: 32px;
+    background: #242424;
+    backdrop-filter: blur(10px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    user-select: none;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+    z-index: 9999;
+}
+
+.traffic-lights {
+    position: absolute;
+    right: 15px;
+    display: flex;
+    gap: 8px;
+}
+
+.light {
+    width: 13px;
+    height: 13px;
+    border-radius: 50%;
+    border: none;
+    cursor: pointer;
+    padding: 0;
+    transition: opacity 0.2s;
+}
+
+.light:hover {
+    opacity: 0.8;
+}
+
+.close {
+    background-color: #ff5f57;
+    border: 0.5px solid #e1483f;
+}
+.minimize {
+    background-color: #febc2e;
+    border: 0.5px solid #d6a123;
+}
+.maximize {
+    background-color: #28c840;
+    border: 0.5px solid #20a132;
+}
+
+.title {
+    font-size: 13px;
+    color: white;
+    font-family:
+        -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica;
+    max-width: calc(100% - 200px);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    flex-shrink: 1;
+    text-align: center;
+    pointer-events: none;
+}

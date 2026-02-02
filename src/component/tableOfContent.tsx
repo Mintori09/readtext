@@ -1,120 +1,144 @@
 import { useEffect, useState, RefObject } from "react";
 
+interface HeadingData {
+  level: number;
+  text: string;
+  id: string;
+}
+
 interface TableOfContentsProps {
   content: string;
   scrollRef: RefObject<HTMLDivElement | null>;
 }
 
+const HEADING_SELECTOR =
+  ".prose-wrapper h1, .prose-wrapper h2, .prose-wrapper h3";
+const DEBOUNCE_DELAY_MS = 300;
+const SCROLL_OFFSET_PX = 40;
+const INTERSECTION_THRESHOLD = 0.1;
+const ROOT_MARGIN = "0px 0px -80% 0px";
+
 export const TableOfContents = ({
   content,
   scrollRef,
 }: TableOfContentsProps) => {
-  const [isVisible, setIsVisible] = useState(false);
-  const [headings, setHeadings] = useState<
-    { level: number; text: string; id: string }[]
-  >([]);
-
-  const [activeId, setActiveId] = useState<string>("");
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [headings, setHeadings] = useState<HeadingData[]>([]);
+  const [activeHeadingId, setActiveHeadingId] = useState<string>("");
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      const headingElements = document.querySelectorAll(
-        ".prose-wrapper h1, .prose-wrapper h2, .prose-wrapper h3",
-      );
-      const extracted = Array.from(headingElements).map((el) => ({
-        level: parseInt(el.tagName.replace("H", "")),
-        text: (el as HTMLElement).innerText,
-        id: el.id,
+    const parseHeadings = () => {
+      const headingElements = document.querySelectorAll(HEADING_SELECTOR);
+      const extractedHeadings = Array.from(headingElements).map((element) => ({
+        level: parseInt(element.tagName.replace("H", ""), 10),
+        text: (element as HTMLElement).innerText,
+        id: element.id,
       }));
-      setHeadings(extracted);
-    }, 300);
-    return () => clearTimeout(timer);
+      setHeadings(extractedHeadings);
+    };
+
+    const debounceTimer = setTimeout(parseHeadings, DEBOUNCE_DELAY_MS);
+    return () => clearTimeout(debounceTimer);
   }, [content]);
 
   useEffect(() => {
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            setActiveId(entry.target.id);
-          }
-        });
-      },
-      {
-        root: scrollRef.current,
-        rootMargin: "0px 0px -80% 0px",
-        threshold: 0.1,
-      },
-    );
+    const observerCallback = (entries: IntersectionObserverEntry[]) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          setActiveHeadingId(entry.target.id);
+        }
+      });
+    };
 
-    const headingElements = document.querySelectorAll(
-      ".prose-wrapper h1, .prose-wrapper h2, .prose-wrapper h3",
+    const observerOptions = {
+      root: scrollRef.current,
+      rootMargin: ROOT_MARGIN,
+      threshold: INTERSECTION_THRESHOLD,
+    };
+
+    const observer = new IntersectionObserver(
+      observerCallback,
+      observerOptions,
     );
-    headingElements.forEach((el) => observer.observe(el));
+    const headingElements = document.querySelectorAll(HEADING_SELECTOR);
+
+    headingElements.forEach((element) => observer.observe(element));
 
     return () => observer.disconnect();
   }, [headings, scrollRef]);
 
-  const scrollToHeading = (id: string) => {
-    const element = document.getElementById(id);
-    if (element && scrollRef.current) {
-      const offset = 40;
-      const elementPosition = element.offsetTop;
+  const handleHeadingClick = (id: string) => {
+    const targetElement = document.getElementById(id);
+    const container = scrollRef.current;
 
-      scrollRef.current.scrollTo({
-        top: elementPosition - offset,
+    if (targetElement && container) {
+      const scrollPosition = targetElement.offsetTop - SCROLL_OFFSET_PX;
+
+      container.scrollTo({
+        top: scrollPosition,
         behavior: "smooth",
       });
-      setIsVisible(false);
+
+      setIsMobileMenuOpen(false);
     }
   };
 
-  if (headings.length === 0) return null;
+  if (headings.length === 0) {
+    return null;
+  }
 
   return (
     <>
       <button
-        className={`toc-toggle ${isVisible ? "active" : ""}`}
-        onClick={() => setIsVisible(!isVisible)}
+        className={`toc-toggle ${isMobileMenuOpen ? "active" : ""}`}
+        onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+        aria-label="Toggle Table of Contents"
       >
-        {isVisible ? "✕" : "☰"}
+        {isMobileMenuOpen ? "✕" : "☰"}
       </button>
 
-      <nav className={`toc-sidebar ${isVisible ? "show" : "hide"}`}>
+      <nav className={`toc-sidebar ${isMobileMenuOpen ? "show" : "hide"}`}>
         <div className="toc-title">Table of content</div>
         <div className="toc-scroll-area">
           <ul>
-            {headings.map((h, i) => (
-              <li
-                key={`${h.id}-${i}`}
-                className={`toc-item level-${h.level} ${activeId === h.id ? "active" : ""}`}
-              >
-                <div
-                  className="toc-link"
-                  onClick={() => scrollToHeading(h.id)}
-                  style={{
-                    fontWeight: activeId === h.id ? "bold" : "normal",
-                    color:
-                      activeId === h.id
+            {headings.map((heading, index) => {
+              const isActive = activeHeadingId === heading.id;
+
+              return (
+                <li
+                  key={`${heading.id}-${index}`}
+                  className={`toc-item level-${heading.level} ${isActive ? "active" : ""}`}
+                >
+                  <div
+                    className="toc-link"
+                    onClick={() => handleHeadingClick(heading.id)}
+                    style={{
+                      fontWeight: isActive ? "bold" : "normal",
+                      color: isActive
                         ? "var(--accent-color, #007aff)"
                         : "inherit",
-                    borderLeft:
-                      activeId === h.id
-                        ? "2px #007aff"
+                      borderLeft: isActive
+                        ? "2px solid #007aff"
                         : "2px solid transparent",
-                    paddingLeft: "8px",
-                    transition: "all 0.2s ease",
-                  }}
-                >
-                  {h.text}
-                </div>
-              </li>
-            ))}
+                      paddingLeft: "8px",
+                      transition: "all 0.2s ease",
+                      cursor: "pointer",
+                    }}
+                  >
+                    {heading.text}
+                  </div>
+                </li>
+              );
+            })}
           </ul>
         </div>
       </nav>
-      {isVisible && (
-        <div className="toc-overlay" onClick={() => setIsVisible(false)} />
+
+      {isMobileMenuOpen && (
+        <div
+          className="toc-overlay"
+          onClick={() => setIsMobileMenuOpen(false)}
+        />
       )}
     </>
   );
