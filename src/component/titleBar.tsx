@@ -33,9 +33,18 @@ export const TitleBar = ({
   const handleMinimize = () => appWindow.minimize();
   const handleMaximize = () => appWindow.toggleMaximize();
   const handleClose = () => appWindow.close();
+  
+  // Double-click to toggle maximize (macOS behavior)
+  const handleDoubleClick = () => {
+    appWindow.toggleMaximize();
+  };
 
   return (
-    <div className="titlebar" data-tauri-drag-region>
+    <div 
+      className="titlebar" 
+      data-tauri-drag-region
+      onDoubleClick={handleDoubleClick}
+    >
       {onSettingsClick && (
         <button className="settings-btn" onClick={onSettingsClick} title="Settings">
           ⚙️

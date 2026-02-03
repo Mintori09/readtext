@@ -9,6 +9,7 @@ interface HeadingData {
 interface TableOfContentsProps {
   content: string;
   scrollRef: RefObject<HTMLDivElement | null>;
+  hideHeader?: boolean;
 }
 
 const HEADING_SELECTOR =
@@ -21,6 +22,7 @@ const ROOT_MARGIN = "0px 0px -80% 0px";
 export const TableOfContents = ({
   content,
   scrollRef,
+  hideHeader = false,
 }: TableOfContentsProps) => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [headings, setHeadings] = useState<HeadingData[]>([]);
@@ -93,14 +95,46 @@ export const TableOfContents = ({
         className={`toc-toggle ${isMobileMenuOpen ? "active" : ""}`}
         onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
         aria-label="Toggle Table of Contents"
+        aria-expanded={isMobileMenuOpen}
       >
-        {isMobileMenuOpen ? "✕" : "☰"}
+        <svg
+          width="20"
+          height="20"
+          viewBox="0 0 20 20"
+          fill="none"
+          xmlns="http://www.w3.org/2000/svg"
+          className="toc-icon"
+        >
+          {isMobileMenuOpen ? (
+            <path
+              d="M5 5L15 15M15 5L5 15"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+            />
+          ) : (
+            <>
+              <path d="M3 5H17" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+              <path d="M3 10H17" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+              <path d="M3 15H17" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+            </>
+          )}
+        </svg>
       </button>
 
-      <nav className={`toc-sidebar ${isMobileMenuOpen ? "show" : "hide"}`}>
-        <div className="toc-title">Table of content</div>
+      <nav
+        className={`toc-sidebar ${isMobileMenuOpen ? "show" : "hide"}`}
+        aria-label="Table of Contents"
+      >
+        {!hideHeader && (
+          <div className="toc-header">
+            <h2 className="toc-title">Contents</h2>
+            <div className="toc-count">{headings.length} sections</div>
+          </div>
+        )}
+        
         <div className="toc-scroll-area">
-          <ul>
+          <ul role="list">
             {headings.map((heading, index) => {
               const isActive = activeHeadingId === heading.id;
 
@@ -109,24 +143,14 @@ export const TableOfContents = ({
                   key={`${heading.id}-${index}`}
                   className={`toc-item level-${heading.level} ${isActive ? "active" : ""}`}
                 >
-                  <div
+                  <button
                     className="toc-link"
                     onClick={() => handleHeadingClick(heading.id)}
-                    style={{
-                      fontWeight: isActive ? "bold" : "normal",
-                      color: isActive
-                        ? "var(--accent-color, #007aff)"
-                        : "inherit",
-                      borderLeft: isActive
-                        ? "2px solid #007aff"
-                        : "2px solid transparent",
-                      paddingLeft: "8px",
-                      transition: "all 0.2s ease",
-                      cursor: "pointer",
-                    }}
+                    aria-current={isActive ? "location" : undefined}
                   >
-                    {heading.text}
-                  </div>
+                    <span className="toc-indicator" />
+                    <span className="toc-text">{heading.text}</span>
+                  </button>
                 </li>
               );
             })}
@@ -138,6 +162,7 @@ export const TableOfContents = ({
         <div
           className="toc-overlay"
           onClick={() => setIsMobileMenuOpen(false)}
+          aria-hidden="true"
         />
       )}
     </>

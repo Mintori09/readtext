@@ -162,14 +162,13 @@ fn get_instance_mode(app_handle: tauri::AppHandle) -> Result<bool, String> {
 fn open_new_file(app: tauri::AppHandle, path: String) -> Result<(), String> {
     let config = helper::load_config(&app)?;
     
-    if config.instance_mode.enabled {
-        // Create new window for multi-instance mode
-        create_new_window(&app, &path)?;
-    } else {
-        // Emit event to existing window for single-instance mode
-        if let Some(window) = app.get_webview_window("main") {
-            window.emit("open-file", path).map_err(|e| e.to_string())?;
-        }
+    // Always emit to existing window when instance mode is enabled
+    // This allows files to open as new tabs instead of new windows
+    if let Some(window) = app.get_webview_window("main") {
+        window.emit("open-file", path).map_err(|e| e.to_string())?;
+    } else if !config.instance_mode.enabled {
+        // Only create new window if no main window exists and instance mode is disabled
+        return Err("No window available".to_string());
     }
     
     Ok(())

@@ -1,7 +1,7 @@
-import { TableOfContents } from "./tableOfContent";
+import { Sidebar } from "./sidebar";
 import { MarkdownRenderer } from "./markdownRender";
 import { useTheme } from "../hook/useTheme";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useZoom } from "../hook/useZoom";
 import { useVim } from "../hook/useVim";
 import { invoke } from "@tauri-apps/api/core";
@@ -15,6 +15,7 @@ export const MainWindow = ({
 }) => {
   useTheme();
   const scrollRef = useRef<HTMLDivElement>(null);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const fontSize = useZoom(16);
   useEffect(() => {
@@ -72,13 +73,23 @@ export const MainWindow = ({
 
   return (
     <div className="window-flex-container">
-      <TableOfContents content={content} scrollRef={scrollRef} />
+      <Sidebar 
+        content={content} 
+        scrollRef={scrollRef}
+        onOpenChange={setSidebarOpen}
+      />
 
       <main
         ref={scrollRef}
         className="scrollable-content"
         onScroll={handleScroll}
-        style={{ height: "100vh", overflowY: "auto", position: "relative" }}
+        style={{ 
+          height: "100vh", 
+          overflowY: "auto", 
+          position: "relative",
+          marginLeft: sidebarOpen ? "300px" : "0",
+          transition: "margin-left 0.2s ease"
+        }}
       >
         <div id="content" className="markdown-container">
           <MarkdownRenderer content={content} currentPath={currentPath} />

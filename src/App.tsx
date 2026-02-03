@@ -7,13 +7,11 @@ import "./styles/markdown.css";
 import "./styles/print.css";
 import { MainWindow } from "./component/mainWindow";
 import TitleBar, { Tab } from "./component/titleBar";
-import { SettingsPanel } from "./component/settingsPanel";
 
 export default function App() {
   const [content, setContent] = useState<string>("### Loading...");
   const [currentPath, setCurrentPath] = useState<string | null>(null);
   const [_isIndexing, setIsIndexing] = useState<boolean>(true);
-  const [showSettings, setShowSettings] = useState<boolean>(false);
   
   // Tab management
   const [instanceMode, setInstanceMode] = useState<boolean>(false);
@@ -22,6 +20,7 @@ export default function App() {
 
   useEffect(() => {
     let unlistenFn: (() => void) | undefined;
+    let unlistenOpenFile: (() => void) | undefined;
 
     const init = async () => {
       try {
@@ -61,6 +60,47 @@ export default function App() {
         unlistenFn = await listen<string>("file-update", (e) => {
           setContent(e.payload);
         });
+
+        // Listen for external file open events (when opening files from file manager)
+        unlistenOpenFile = await listen<string>("open-file", async (e) => {
+          const newPath = e.payload;
+          
+          if (isInstanceMode) {
+            // Check if file is already open in a tab
+            const existingTab = tabs.find(t => t.path === newPath);
+            if (existingTab) {
+              handleTabChange(existingTab.id);
+              return;
+            }
+
+            // Add as new tab
+            const newTabId = crypto.randomUUID();
+            const newFileName = newPath.split('/').pop() || newPath;
+            const newTab = { id: newTabId, path: newPath, fileName: newFileName };
+            
+            setTabs(prevTabs => [...prevTabs, newTab]);
+            setActiveTabId(newTabId);
+            setCurrentPath(newPath);
+
+            try {
+              const newData = await invoke<string>("read_file", { path: newPath });
+              setContent(newData);
+              await invoke("start_watch", { path: newPath });
+            } catch (err) {
+              console.error("Error loading file:", err);
+            }
+          } else {
+            // Single instance mode - just switch to the new file
+            setCurrentPath(newPath);
+            try {
+              const newData = await invoke<string>("read_file", { path: newPath });
+              setContent(newData);
+              await invoke("start_watch", { path: newPath });
+            } catch (err) {
+              console.error("Error loading file:", err);
+            }
+          }
+        });
       } catch (e) {
         console.error("Initialization error:", e);
       }
@@ -70,6 +110,7 @@ export default function App() {
 
     return () => {
       if (unlistenFn) unlistenFn();
+      if (unlistenOpenFile) unlistenOpenFile();
     };
   }, []);
 
@@ -140,7 +181,6 @@ export default function App() {
     <div>
       <TitleBar 
         titleBar={currentPath} 
-        onSettingsClick={() => setShowSettings(true)}
         instanceMode={instanceMode}
         tabs={tabs}
         activeTabId={activeTabId || undefined}
@@ -149,7 +189,6 @@ export default function App() {
         onNewTab={handleNewTab}
       />
       <MainWindow content={content} currentPath={currentPath} />
-      {showSettings && <SettingsPanel onClose={() => setShowSettings(false)} />}
     </div>
   );
 }

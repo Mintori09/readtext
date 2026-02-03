@@ -1,0 +1,495 @@
+/* VS Code-Style Sidebar */
+
+/* Sidebar Toggle Button */
+.sidebar-toggle {
+    position: fixed;
+    top: 3rem;
+    left: 1rem;
+    z-index: 2000;
+    width: 40px;
+    height: 40px;
+    border-radius: 4px;
+    border: 1px solid #3e3e42;
+    background: #2d2d30;
+    color: #cccccc;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    padding: 0;
+}
+
+.sidebar-toggle:hover {
+    background: #3e3e42;
+}
+
+.sidebar-toggle:active {
+    background: #252526;
+}
+
+.sidebar-toggle.active {
+    left: calc(300px + 1rem);
+    background: #007acc;
+    border-color: #007acc;
+    color: white;
+}
+
+.sidebar-toggle.active:hover {
+    background: #005a9e;
+    border-color: #005a9e;
+}
+
+.sidebar-icon {
+    transition: none;
+}
+
+/* Sidebar Container */
+.sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 300px;
+    height: 100vh;
+    background: #252526;
+    border-right: 1px solid #3e3e42;
+    z-index: 1000;
+    display: flex;
+    flex-direction: column;
+    transition: transform 0.2s ease;
+}
+
+.sidebar.hide {
+    transform: translateX(-100%);
+}
+
+.sidebar.show {
+    transform: translateX(0);
+}
+
+/* Resizer line on the right edge */
+.sidebar::after {
+    content: '';
+    position: absolute;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    width: 1px;
+    background: #3e3e42;
+    pointer-events: none;
+}
+
+/* Adjust main content when sidebar is open */
+.sidebar.show~.scrollable-content,
+.sidebar.show~main {
+    margin-left: 300px;
+    transition: margin-left 0.2s ease;
+}
+
+/* Sidebar Tabs */
+.sidebar-tabs {
+    display: flex;
+    gap: 0;
+    padding: 0;
+    border-bottom: 1px solid #3e3e42;
+    background: #2d2d30;
+}
+
+.sidebar-tab {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 10px 12px;
+    background: transparent;
+    border: none;
+    border-bottom: 2px solid transparent;
+    color: #969696;
+    font-size: 13px;
+    font-weight: 400;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    cursor: pointer;
+    transition: color 0.15s ease, background 0.15s ease;
+}
+
+.sidebar-tab svg {
+    transition: none;
+}
+
+.sidebar-tab:hover {
+    color: #cccccc;
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.sidebar-tab.active {
+    color: #ffffff;
+    border-bottom-color: #007acc;
+    background: #1e1e1e;
+}
+
+/* Sidebar Content */
+.sidebar-content {
+    flex: 1;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    background: #1e1e1e;
+}
+
+.sidebar-section {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Sidebar Header */
+.sidebar-header {
+    padding: 12px 16px;
+    border-bottom: 1px solid #3e3e42;
+    background: #252526;
+}
+
+.sidebar-title {
+    margin: 0;
+    padding: 0;
+    font-weight: 600;
+    font-size: 11px;
+    letter-spacing: 0.05em;
+    color: #cccccc;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    text-transform: uppercase;
+}
+
+.sidebar-count {
+    margin-top: 4px;
+    font-size: 11px;
+    font-weight: 400;
+    color: #858585;
+    text-transform: none;
+    letter-spacing: 0;
+}
+
+/* Sidebar Scroll Area */
+.sidebar-scroll-area {
+    flex: 1;
+    overflow-y: auto;
+    padding: 8px 0;
+    scrollbar-width: thin;
+    scrollbar-color: #424242 transparent;
+}
+
+.sidebar-scroll-area::-webkit-scrollbar {
+    width: 10px;
+}
+
+.sidebar-scroll-area::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.sidebar-scroll-area::-webkit-scrollbar-thumb {
+    background: #424242;
+    border-radius: 0;
+    border: 3px solid #1e1e1e;
+}
+
+.sidebar-scroll-area::-webkit-scrollbar-thumb:hover {
+    background: #4e4e4e;
+}
+
+/* Contents Section Styles */
+.contents-section ul {
+    padding: 0;
+    margin: 0;
+    list-style: none;
+}
+
+.sidebar-item {
+    margin-bottom: 0;
+}
+
+.sidebar-link {
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    padding: 4px 16px;
+    font-size: 13px;
+    color: #cccccc;
+    background: transparent;
+    border: none;
+    border-left: 2px solid transparent;
+    transition: background 0.15s ease, color 0.15s ease;
+    user-select: none;
+    line-height: 22px;
+    font-weight: 400;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    text-align: left;
+    position: relative;
+}
+
+.sidebar-link::before {
+    display: none;
+}
+
+.sidebar-link:hover {
+    background: #2a2d2e;
+    color: #ffffff;
+}
+
+.sidebar-link:active {
+    background: #37373d;
+}
+
+.sidebar-indicator {
+    width: 4px;
+    height: 4px;
+    border-radius: 50%;
+    background: #858585;
+    flex-shrink: 0;
+    transition: none;
+}
+
+.sidebar-link:hover .sidebar-indicator {
+    background: #cccccc;
+}
+
+.sidebar-item.active .sidebar-link {
+    background: #37373d;
+    color: #ffffff;
+    border-left-color: #007acc;
+}
+
+.sidebar-item.active .sidebar-indicator {
+    background: #007acc;
+}
+
+.sidebar-item.active .sidebar-link:hover {
+    background: #2a2d2e;
+}
+
+.sidebar-text {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* Heading Levels */
+.sidebar-item.level-1 .sidebar-link {
+    font-weight: 600;
+    font-size: 13px;
+}
+
+.sidebar-item.level-2 {
+    margin-left: 16px;
+}
+
+.sidebar-item.level-2 .sidebar-link {
+    font-size: 13px;
+}
+
+.sidebar-item.level-3 {
+    margin-left: 32px;
+}
+
+.sidebar-item.level-3 .sidebar-link {
+    font-size: 12px;
+    color: #969696;
+}
+
+.sidebar-item.level-3 .sidebar-link:hover {
+    color: #cccccc;
+}
+
+/* Empty State */
+.sidebar-empty,
+.sidebar-loading {
+    padding: 24px 16px;
+    text-align: center;
+    color: #858585;
+    font-size: 12px;
+}
+
+/* Settings Section Styles */
+.settings-group {
+    margin-bottom: 16px;
+    padding: 0 16px;
+}
+
+.settings-group:last-child {
+    margin-bottom: 0;
+}
+
+.settings-group h3 {
+    margin: 0 0 8px 0;
+    font-size: 11px;
+    font-weight: 600;
+    color: #cccccc;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.setting-item {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 8px 12px;
+    border-radius: 3px;
+    cursor: pointer;
+    transition: background 0.15s ease;
+    margin-bottom: 4px;
+    background: transparent;
+    border: 1px solid transparent;
+}
+
+.setting-item:hover {
+    background: #2a2d2e;
+}
+
+.setting-item:active {
+    background: #37373d;
+}
+
+.setting-item input[type="checkbox"] {
+    margin-right: 8px;
+    cursor: pointer;
+    width: 16px;
+    height: 16px;
+    accent-color: #007acc;
+}
+
+.setting-item span {
+    font-weight: 400;
+    color: #cccccc;
+    font-size: 13px;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+.setting-item small {
+    color: #858585;
+    font-size: 12px;
+    margin-left: 24px;
+    line-height: 1.4;
+}
+
+/* Search Paths */
+.search-paths-list {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin-bottom: 8px;
+}
+
+.path-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 6px 8px;
+    background: #2d2d30;
+    border: 1px solid #3e3e42;
+    border-radius: 3px;
+    transition: background 0.15s ease;
+}
+
+.path-item:hover {
+    background: #37373d;
+}
+
+.path-item code {
+    font-size: 12px;
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: #cccccc;
+    font-family: 'Consolas', 'Courier New', monospace;
+    background: none;
+    padding: 0;
+}
+
+.path-item button {
+    background: #c5c5c5;
+    color: #1e1e1e;
+    border: none;
+    padding: 4px 8px;
+    border-radius: 2px;
+    cursor: pointer;
+    font-size: 11px;
+    font-weight: 500;
+    transition: background 0.15s ease;
+}
+
+.path-item button:hover {
+    background: #e0e0e0;
+}
+
+.path-item button:active {
+    background: #a0a0a0;
+}
+
+/* Error Message */
+.error-message {
+    background: #5a1d1d;
+    color: #f48771;
+    border: 1px solid #be1100;
+    padding: 12px;
+    border-radius: 3px;
+    margin-bottom: 12px;
+    font-size: 12px;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+/* Sidebar Footer */
+.sidebar-footer {
+    padding: 12px 16px;
+    border-top: 1px solid #3e3e42;
+    background: #252526;
+}
+
+.save-btn {
+    width: 100%;
+    padding: 8px 12px;
+    background: #0e639c;
+    color: white;
+    border: 1px solid #0e639c;
+    border-radius: 2px;
+    font-size: 13px;
+    font-weight: 400;
+    cursor: pointer;
+    transition: background 0.15s ease;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+.save-btn:hover:not(:disabled) {
+    background: #1177bb;
+}
+
+.save-btn:active:not(:disabled) {
+    background: #0d5a8f;
+}
+
+.save-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .sidebar {
+        width: 100%;
+        max-width: 300px;
+    }
+
+    .sidebar-toggle.active {
+        left: calc(100vw - 3rem);
+    }
+
+    /* On mobile, use overlay mode */
+    .sidebar.show~.scrollable-content,
+    .sidebar.show~main {
+        margin-left: 0;
+    }
+}
