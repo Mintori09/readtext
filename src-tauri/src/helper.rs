@@ -33,3 +33,28 @@ pub fn get_config(app_handle: &tauri::AppHandle) -> Result<Config, Box<dyn std::
 pub fn get_config_path(app_handle: &tauri::AppHandle) -> PathBuf {
     get_path(app_handle, "settings.json")
 }
+
+pub fn load_config(app_handle: &tauri::AppHandle) -> Result<Config, String> {
+    let path = get_path(app_handle, "config.json");
+    
+    if !path.exists() {
+        let default_config = Config::default();
+        save_config(app_handle, &default_config)?;
+        return Ok(default_config);
+    }
+    
+    let content = fs::read_to_string(&path).map_err(|e| e.to_string())?;
+    serde_json::from_str(&content).map_err(|e| e.to_string())
+}
+
+pub fn save_config(app_handle: &tauri::AppHandle, config: &Config) -> Result<(), String> {
+    let path = get_path(app_handle, "config.json");
+    
+    if let Some(parent) = path.parent() {
+        fs::create_dir_all(parent).map_err(|e| e.to_string())?;
+    }
+    
+    let json = serde_json::to_string_pretty(config).map_err(|e| e.to_string())?;
+    fs::write(path, json).map_err(|e| e.to_string())
+}
+

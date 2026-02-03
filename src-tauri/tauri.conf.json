@@ -25,7 +25,9 @@
       "csp": "default-src 'self'; img-src 'self' asset: https://asset.localhost https://* http://* data:; connect-src 'self' ipc:;",
       "assetProtocol": {
         "enable": true,
-        "scope": ["**/**"]
+        "scope": [
+          "**/**"
+        ]
       }
     }
   },
@@ -41,7 +43,9 @@
     ],
     "fileAssociations": [
       {
-        "ext": ["md"],
+        "ext": [
+          "md"
+        ],
         "mimeType": "image/plaintext",
         "rank": "Default"
       }

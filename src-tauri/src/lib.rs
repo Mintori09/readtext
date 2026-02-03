@@ -14,8 +14,7 @@ use std::fs;
 use std::path::Path;
 use std::sync::Mutex;
 use std::time::Instant;
-use tauri::Manager;
-use tauri::{Emitter, Window};
+use tauri::{Emitter, Listener, Manager, Window};
 use tauri_plugin_cli::CliExt;
 
 #[tauri::command]
@@ -143,6 +142,78 @@ fn read_file(path: String) -> Result<String, String> {
     fs::read_to_string(p).map_err(|e| format!("Không thể đọc file: {}", e))
 }
 
+#[tauri::command]
+fn get_config(app_handle: tauri::AppHandle) -> Result<crate::config::Config, String> {
+    helper::load_config(&app_handle)
+}
+
+#[tauri::command]
+fn update_config(app_handle: tauri::AppHandle, config: crate::config::Config) -> Result<(), String> {
+    helper::save_config(&app_handle, &config)
+}
+
+#[tauri::command]
+fn get_instance_mode(app_handle: tauri::AppHandle) -> Result<bool, String> {
+    let config = helper::load_config(&app_handle)?;
+    Ok(config.instance_mode.enabled)
+}
+
+#[tauri::command]
+fn open_new_file(app: tauri::AppHandle, path: String) -> Result<(), String> {
+    let config = helper::load_config(&app)?;
+    
+    if config.instance_mode.enabled {
+        // Create new window for multi-instance mode
+        create_new_window(&app, &path)?;
+    } else {
+        // Emit event to existing window for single-instance mode
+        if let Some(window) = app.get_webview_window("main") {
+            window.emit("open-file", path).map_err(|e| e.to_string())?;
+        }
+    }
+    
+    Ok(())
+}
+
+fn create_new_window(app: &tauri::AppHandle, file_path: &str) -> Result<(), String> {
+    use tauri::{WebviewUrl, WebviewWindowBuilder};
+    use std::time::{SystemTime, UNIX_EPOCH};
+    
+    let timestamp = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap()
+        .as_millis();
+    let label = format!("window_{}", timestamp);
+    
+    let file_name = Path::new(file_path)
+        .file_name()
+        .and_then(|n| n.to_str())
+        .unwrap_or("ReadText");
+    
+    let window = WebviewWindowBuilder::new(
+        app,
+        label,
+        WebviewUrl::App("index.html".into())
+    )
+    .title(file_name)
+    .inner_size(800.0, 600.0)
+    .min_inner_size(600.0, 800.0)
+    .decorations(false)
+    .transparent(true)
+    .build()
+    .map_err(|e| e.to_string())?;
+    
+    // Clone the file path to be loaded by the new window
+    let path_clone = file_path.to_string();
+    let window_clone = window.clone();
+    window.once("window-ready", move |_| {
+        let _ = window_clone.emit("load-file", path_clone);
+    });
+    
+    Ok(())
+}
+
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     let start_app = Instant::now();
@@ -186,7 +257,11 @@ pub fn run() {
             save_cache,
             get_cache,
             rebuild_index,
-            get_user_css
+            get_user_css,
+            get_config,
+            update_config,
+            get_instance_mode,
+            open_new_file,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
