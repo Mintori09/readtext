@@ -7,10 +7,13 @@ import "./styles/markdown.css";
 import "./styles/print.css";
 import { MainWindow } from "./component/mainWindow";
 import TitleBar, { Tab } from "./component/titleBar";
+import { PanelType } from "./component/ActivityBar";
 
 export default function App() {
   const [content, setContent] = useState<string>("### Loading...");
   const [currentPath, setCurrentPath] = useState<string | null>(null);
+  const [currentFolder, setCurrentFolder] = useState<string | null>(null);
+  const [defaultActivePanel, setDefaultActivePanel] = useState<PanelType>(null);
   const [_isIndexing, setIsIndexing] = useState<boolean>(true);
 
   // Tab management
@@ -70,6 +73,68 @@ export default function App() {
 
         if (!cliPath) {
           await invoke("close_app");
+          return;
+        }
+
+        // Check if CLI path is a directory
+        let isDir = false;
+        try {
+          isDir = await invoke<boolean>("is_dir", { path: cliPath });
+        } catch (e) {
+          console.error("Failed to check if path is directory:", e);
+        }
+
+        if (isDir) {
+          setCurrentFolder(cliPath);
+          setDefaultActivePanel("explorer");
+          
+          // Try to find a matching file (folderName.md) or README.md
+          const folderName = cliPath.split("/").pop() || "";
+          const potentialFiles = [
+            `${cliPath}/${folderName}.md`,
+            `${cliPath}/README.md`,
+            `${cliPath}/readme.md`,
+            `${cliPath}/index.md`
+          ];
+
+          let foundFile: string | null = null;
+          
+          for (const filePath of potentialFiles) {
+            try {
+              // Check if file exists by trying to read metadata
+               await invoke("read_file", { path: filePath });
+               foundFile = filePath;
+               break;
+            } catch (e) {
+              // File doesn't exist or can't be read, continue to next
+              continue;
+            }
+          }
+
+          if (foundFile) {
+            // Initialize with the found file
+             const tabId = crypto.randomUUID();
+             const fileName = foundFile.split("/").pop() || foundFile;
+             
+             if (isInstanceMode) {
+               const initialTab = { id: tabId, path: foundFile, fileName };
+               setTabs([initialTab]);
+               tabsRef.current = [initialTab];
+               setActiveTabId(tabId);
+             }
+             
+             setCurrentPath(foundFile);
+             const data = await invoke<string>("read_file", { path: foundFile });
+             setContent(data);
+             await invoke("start_watch", { path: foundFile });
+             
+             // Still notify readiness
+             await invoke("show_window");
+             return;
+          }
+
+          setContent("### Select a file from the explorer");
+          await invoke("show_window");
           return;
         }
 
@@ -268,6 +333,8 @@ export default function App() {
       <MainWindow 
         content={content} 
         currentPath={currentPath} 
+        rootPath={currentFolder}
+        defaultActivePanel={defaultActivePanel}
         onFileOpen={handleFileOpen}
       />
     </div>

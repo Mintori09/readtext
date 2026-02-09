@@ -1,5 +1,5 @@
-import { useState, useEffect, memo, useCallback } from "react";
-import { readDir, DirEntry } from "@tauri-apps/plugin-fs";
+import { useState, useEffect, memo, useCallback, useRef } from "react";
+import { readDir, DirEntry, rename } from "@tauri-apps/plugin-fs";
 import { open } from "@tauri-apps/plugin-dialog";
 
 interface FileNode {
@@ -12,26 +12,35 @@ interface FileNode {
 
 interface ExplorerPanelProps {
   currentPath: string | null;
+  rootPath?: string | null;
   onFileOpen: (path: string) => void;
 }
 
 // FIX: Add React.memo to prevent unnecessary re-renders
-export const ExplorerPanel = memo(({ currentPath, onFileOpen }: ExplorerPanelProps) => {
+export const ExplorerPanel = memo(({ currentPath, rootPath, onFileOpen }: ExplorerPanelProps) => {
   const [currentFolder, setCurrentFolder] = useState<string | null>(null);
   const [files, setFiles] = useState<FileNode[]>([]);
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(false);
+  const [renamingPath, setRenamingPath] = useState<string | null>(null);
+  const [renameValue, setRenameValue] = useState("");
+  const renameInputRef = useRef<HTMLInputElement>(null);
 
-  // Get current folder from file path
+  // Get current folder from rootPath or file path
   useEffect(() => {
-    if (currentPath) {
+    if (rootPath) {
+      if (rootPath !== currentFolder) {
+        setCurrentFolder(rootPath);
+        loadFolder(rootPath);
+      }
+    } else if (currentPath) {
       const folder = currentPath.substring(0, currentPath.lastIndexOf("/"));
       if (folder !== currentFolder) {
         setCurrentFolder(folder);
         loadFolder(folder);
       }
     }
-  }, [currentPath, currentFolder]);
+  }, [currentPath, rootPath, currentFolder]);
 
   const loadFolder = useCallback(async (folderPath: string) => {
     setLoading(true);
@@ -138,6 +147,66 @@ export const ExplorerPanel = memo(({ currentPath, onFileOpen }: ExplorerPanelPro
     }
   }, [loadFolder]);
 
+  const handleRename = useCallback(async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!renamingPath || !renameValue.trim()) {
+      setRenamingPath(null);
+      return;
+    }
+
+    try {
+      const oldPath = renamingPath;
+      const pathParts = oldPath.split("/");
+      pathParts.pop(); // Remove old filename
+      const newPath = `${pathParts.join("/")}/${renameValue}`;
+
+      if (oldPath !== newPath) {
+        await rename(oldPath, newPath);
+        
+        // Check if we renamed the current folder root
+        if (currentFolder && oldPath === currentFolder) {
+            setCurrentFolder(newPath);
+            loadFolder(newPath);
+        } else {
+             // Refresh the parent folder of the renamed item
+             // If it's a top-level item waiting for refresh might be tricky without full reload
+             // For now, let's just reload the current root folder to be safe
+             if (currentFolder) loadFolder(currentFolder);
+        }
+      }
+    } catch (err) {
+      console.error("Failed to rename:", err);
+      // You might want to show an error notification here
+    } finally {
+      setRenamingPath(null);
+      setRenameValue("");
+    }
+  }, [renamingPath, renameValue, currentFolder, loadFolder]);
+
+  const startRenaming = useCallback((node: FileNode, e: React.MouseEvent) => {
+    e.preventDefault(); // Prevent default context menu
+    e.stopPropagation();
+    setRenamingPath(node.path);
+    setRenameValue(node.name);
+    // Focus will be handled by useEffect or autoFocus
+  }, []);
+
+  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
+    if (e.key === "Escape") {
+      setRenamingPath(null);
+      setRenameValue("");
+    }
+  }, []);
+
+  // Use explicit effect to focus input
+  useEffect(() => {
+    if (renamingPath && renameInputRef.current) {
+        renameInputRef.current.focus();
+        renameInputRef.current.select();
+    }
+  }, [renamingPath]);
+
+
   // Recursive file tree renderer
   const renderFileTree = useCallback((nodes: FileNode[], depth: number = 0) => {
     return nodes.map((node) => (
@@ -146,6 +215,7 @@ export const ExplorerPanel = memo(({ currentPath, onFileOpen }: ExplorerPanelPro
           className={`explorer-item ${currentPath === node.path ? "active" : ""}`}
           style={{ paddingLeft: `${12 + depth * 16}px` }}
           onClick={() => handleFileClick(node)}
+          onContextMenu={(e) => startRenaming(node, e)}
         >
           <span className="explorer-icon">
             {node.isDirectory ? (
@@ -158,7 +228,21 @@ export const ExplorerPanel = memo(({ currentPath, onFileOpen }: ExplorerPanelPro
               <FileIcon />
             )}
           </span>
-          <span className="explorer-name">{node.name}</span>
+          {renamingPath === node.path ? (
+              <form onSubmit={handleRename} onClick={(e) => e.stopPropagation()} className="rename-form">
+                  <input
+                    ref={renameInputRef}
+                    type="text"
+                    value={renameValue}
+                    onChange={(e) => setRenameValue(e.target.value)}
+                    onBlur={handleRename}
+                    onKeyDown={handleKeyDown}
+                    className="rename-input"
+                  />
+              </form>
+          ) : (
+             <span className="explorer-name">{node.name}</span>
+          )}
         </button>
         
         {/* Render children if expanded */}

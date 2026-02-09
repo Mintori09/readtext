@@ -18,6 +18,22 @@
     "core:window:allow-internal-toggle-maximize",
     "core:window:allow-toggle-maximize",
     "dialog:allow-open",
-    "dialog:default"
+    "dialog:default",
+    {
+      "identifier": "fs:allow-read-dir",
+      "allow": [
+        {
+          "path": "**"
+        }
+      ]
+    },
+    {
+      "identifier": "fs:allow-read-file",
+      "allow": [
+        {
+          "path": "**"
+        }
+      ]
+    }
   ]
 }

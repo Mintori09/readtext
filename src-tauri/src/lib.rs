@@ -99,10 +99,9 @@ fn get_cli_file(app: tauri::AppHandle) -> Option<String> {
             } else if !matches.args.is_empty() {
                 for (_, arg) in matches.args {
                     if let Some(val) = arg.value.as_str() {
-                        if val.ends_with(".md") {
-                            file_path = Some(val.to_string());
-                            break;
-                        }
+                        // Allow any path, let frontend handle if it's a dir or file
+                        file_path = Some(val.to_string());
+                        break;
                     }
                 }
             }
@@ -205,6 +204,14 @@ async fn read_file(path: String) -> Result<String, String> {
     tokio::fs::read_to_string(&p)
         .await
         .map_err(|e| format!("Không thể đọc file: {}", e))
+}
+
+#[tauri::command]
+async fn is_dir(path: String) -> Result<bool, String> {
+    let metadata = tokio::fs::metadata(&path)
+        .await
+        .map_err(|e| e.to_string())?;
+    Ok(metadata.is_dir())
 }
 
 #[tauri::command]
@@ -320,6 +327,7 @@ pub fn run() {
             show_window,
             read_file,
             save_file,
+            is_dir,
             get_cli_file,
             close_app,
             resolve_image_path,

@@ -1,7 +1,7 @@
 import { Sidebar } from "./sidebar";
 import { ActivityBar, PanelType } from "./ActivityBar";
 import { MarkdownRenderer } from "./markdownRender";
-import { MarkdownEditor } from "./MarkdownEditor";
+import { MarkdownEditor, MarkdownEditorHandle } from "./MarkdownEditor";
 import { useTheme } from "../hook/useTheme";
 import { useEffect, useRef, useState, useCallback } from "react";
 import { useZoom } from "../hook/useZoom";
@@ -15,18 +15,33 @@ export const MainWindow = ({
   currentPath,
   onFileOpen,
   onContentChange,
+  rootPath,
+  defaultActivePanel,
 }: {
   content: string;
   currentPath: string | null;
   onFileOpen?: (path: string) => void;
   onContentChange?: (newContent: string) => void;
+  rootPath?: string | null;
+  defaultActivePanel?: PanelType;
 }) => {
   useTheme();
   const scrollRef = useRef<HTMLDivElement>(null);
-  const [activePanel, setActivePanel] = useState<PanelType>(null);
+  const [activePanel, setActivePanel] = useState<PanelType>(defaultActivePanel || null);
+  
+  // Update active panel when default changes (e.g. from CLI dir open)
+  useEffect(() => {
+    if (defaultActivePanel) {
+      setActivePanel(defaultActivePanel);
+    }
+  }, [defaultActivePanel]);
   const [viewMode, setViewMode] = useState<ViewMode>("preview");
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [editContent, setEditContent] = useState(content);
+  
+  const editorRef = useRef<MarkdownEditorHandle>(null);
+  const isScrollingRef = useRef<"editor" | "preview" | null>(null);
+  const syncTimeoutRef = useRef<number | null>(null);
 
   const fontSize = useZoom(16);
   useEffect(() => {
@@ -72,8 +87,29 @@ export const MainWindow = ({
   }, [currentPath, content]);
 
   const handleScroll = (e: React.UIEvent<HTMLElement>) => {
-    if (!currentPath) return;
+    // 1. Handle Sync in Split Mode
+    if (viewMode === "split" && isScrollingRef.current !== "editor") {
+        isScrollingRef.current = "preview";
+        
+        const { scrollTop, scrollHeight, clientHeight } = e.currentTarget;
+        const percent = (scrollTop / (scrollHeight - clientHeight)) * 100;
+        
+        if (editorRef.current) {
+            // Optimize with rAF to prevent jank
+            requestAnimationFrame(() => {
+                editorRef.current?.scrollToPercent(percent);
+            });
+        }
 
+        // Debounce lock release to prevent feedback loop during continuous scroll
+        if (syncTimeoutRef.current) clearTimeout(syncTimeoutRef.current);
+        syncTimeoutRef.current = window.setTimeout(() => {
+            if (isScrollingRef.current === "preview") isScrollingRef.current = null;
+        }, 100);
+    }
+    
+    // 2. Handle Scroll Saving (existing logic)
+    if (!currentPath) return;
     const scrollTop = e.currentTarget.scrollTop;
 
     if (saveTimeoutRef.current) {
@@ -87,6 +123,28 @@ export const MainWindow = ({
       );
     }, 300);
   };
+
+  const handleEditorScroll = useCallback((percent: number) => {
+    if (viewMode === "split" && isScrollingRef.current !== "preview") {
+        isScrollingRef.current = "editor";
+        
+        if (scrollRef.current) {
+            const { scrollHeight, clientHeight } = scrollRef.current;
+            const scrollTop = (scrollHeight - clientHeight) * (percent / 100);
+            
+            // Optimize with rAF
+            requestAnimationFrame(() => {
+                scrollRef.current?.scrollTo({ top: scrollTop, behavior: "instant" });
+            });
+        }
+
+        // Debounce lock release
+        if (syncTimeoutRef.current) clearTimeout(syncTimeoutRef.current);
+        syncTimeoutRef.current = window.setTimeout(() => {
+            if (isScrollingRef.current === "editor") isScrollingRef.current = null;
+        }, 100);
+    }
+  }, [viewMode]);
 
   const handleFileOpen = (path: string) => {
     onFileOpen?.(path);
@@ -108,6 +166,23 @@ export const MainWindow = ({
       console.error("Failed to save file:", err);
     }
   }, [currentPath, editContent, hasUnsavedChanges]);
+
+
+
+  // Initial Sync when switching to Split Mode
+  useEffect(() => {
+    if (viewMode === "split") {
+        // Give time for layout to settle
+        setTimeout(() => {
+            const percent = editorRef.current?.getScrollPercent() || 0;
+            if (scrollRef.current) {
+                const { scrollHeight, clientHeight } = scrollRef.current;
+                const scrollTop = (scrollHeight - clientHeight) * (percent / 100);
+                scrollRef.current.scrollTo({ top: scrollTop, behavior: "instant" });
+            }
+        }, 100);
+    }
+  }, [viewMode]);
 
   // Keyboard shortcuts for mode switching
   useEffect(() => {
@@ -153,6 +228,7 @@ export const MainWindow = ({
         scrollRef={scrollRef}
         activePanel={activePanel}
         currentPath={currentPath}
+        rootPath={rootPath}
         onFileOpen={handleFileOpen}
       />
 
@@ -160,9 +236,12 @@ export const MainWindow = ({
         {showEditor && (
           <div className="editor-pane">
             <MarkdownEditor
+              ref={editorRef}
               content={editContent}
               onChange={handleEditorChange}
               onSave={handleSave}
+              viewMode={viewMode}
+              onScroll={handleEditorScroll}
             />
           </div>
         )}
@@ -173,7 +252,7 @@ export const MainWindow = ({
             className="content-area scrollable-content preview-pane"
             onScroll={handleScroll}
             style={{
-              height: "100vh",
+              height: "100%", // FIX: Fill flex parent
               overflowY: "auto",
               position: "relative",
             }}

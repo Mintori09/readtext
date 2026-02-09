@@ -30,6 +30,7 @@ interface SidebarProps {
   scrollRef: RefObject<HTMLDivElement | null>;
   activePanel: PanelType;
   currentPath: string | null;
+  rootPath?: string | null;
   onFileOpen?: (path: string) => void;
 }
 
@@ -43,6 +44,7 @@ export const Sidebar = memo(({
   scrollRef, 
   activePanel, 
   currentPath,
+  rootPath,
   onFileOpen 
 }: SidebarProps) => {
   // TOC state
@@ -194,6 +196,7 @@ export const Sidebar = memo(({
       {activePanel === "explorer" && (
         <ExplorerPanel 
           currentPath={currentPath} 
+          rootPath={rootPath}
           onFileOpen={handleFileOpen}
         />
       )}
