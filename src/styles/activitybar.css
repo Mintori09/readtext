@@ -1,0 +1,149 @@
+/* VS Code Activity Bar */
+
+.activity-bar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 48px;
+    height: 100vh;
+    background: #333333;
+    border-right: 1px solid #252526;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    z-index: 1100;
+    padding-top: 35px;
+    /* Account for title bar */
+}
+
+.activity-bar-top,
+.activity-bar-bottom {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.activity-bar-item {
+    position: relative;
+    width: 48px;
+    height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: none;
+    color: #858585;
+    cursor: pointer;
+    transition: color 0.15s ease;
+    padding: 0;
+}
+
+.activity-bar-item:hover {
+    color: #ffffff;
+}
+
+.activity-bar-item.active {
+    color: #ffffff;
+}
+
+.activity-bar-item svg {
+    width: 24px;
+    height: 24px;
+}
+
+.activity-bar-indicator {
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background: #ffffff;
+}
+
+/* Tooltip styles */
+.activity-bar-item[title]:hover::after {
+    content: attr(title);
+    position: absolute;
+    left: 52px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: #252526;
+    color: #cccccc;
+    padding: 4px 8px;
+    border-radius: 3px;
+    font-size: 12px;
+    white-space: nowrap;
+    z-index: 2000;
+    border: 1px solid #454545;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+/* Separator between panel icons and view mode icons */
+.activity-bar-separator {
+    width: 24px;
+    height: 1px;
+    background: #454545;
+    margin: 8px 0;
+}
+
+/* Save button with unsaved indicator */
+.save-button {
+    color: #89d185 !important;
+}
+
+.save-button:hover {
+    color: #4dfa4d !important;
+}
+
+.unsaved-dot {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    width: 8px;
+    height: 8px;
+    background: #e9a700;
+    border-radius: 50%;
+}
+
+/* Content wrapper for view modes */
+.content-wrapper {
+    display: flex;
+    flex: 1;
+    height: 100%;
+    min-height: 0;
+    overflow: hidden;
+}
+
+.content-wrapper.view-preview .editor-pane {
+    display: none;
+}
+
+.content-wrapper.view-edit .preview-pane {
+    display: none;
+}
+
+.content-wrapper.view-split {
+    display: flex;
+}
+
+.content-wrapper.view-split .editor-pane,
+.content-wrapper.view-split .preview-pane {
+    flex: 1;
+    width: 50%;
+    min-width: 0;
+}
+
+.content-wrapper.view-split .editor-pane {
+    border-right: 1px solid #333;
+}
+
+.editor-pane {
+    height: 100%;
+    overflow: hidden;
+}
+
+.preview-pane {
+    flex: 1;
+    overflow-y: auto;
+    min-width: 0;
+}

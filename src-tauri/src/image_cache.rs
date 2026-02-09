@@ -1,5 +1,6 @@
 use crate::helper::get_config;
 use rusqlite::{params, Connection, Result, Transaction};
+use std::collections::HashMap;
 use std::sync::Mutex;
 use std::time::SystemTime;
 use std::{path::Path, time::Instant};
@@ -9,6 +10,8 @@ use walkdir::WalkDir;
 const DATABASE_FILE_NAME: &str = "cache.db";
 const SUPPORTED_IMAGE_EXTENSIONS: [&str; 7] = ["jpg", "jpeg", "png", "gif", "webp", "svg", "bmp"];
 
+// Note: RwLock cannot be used because rusqlite::Connection is not Sync
+// Using Mutex for thread-safe access
 pub struct DatabaseState(pub Mutex<Connection>);
 
 pub fn initialize_database(app_handle: &AppHandle) -> Connection {
@@ -188,6 +191,7 @@ fn upsert_image_record(transaction: &Transaction, path: &Path) -> Result<(), Str
     Ok(())
 }
 
+// Single image resolution (kept for backward compatibility)
 #[tauri::command]
 pub fn resolve_image_path(
     state: State<'_, DatabaseState>,
@@ -200,6 +204,26 @@ pub fn resolve_image_path(
     })
 }
 
+// FIX #6: Batch image resolution to reduce N+1 IPC overhead
+// Resolves multiple image paths in a single IPC call
+#[tauri::command]
+pub fn resolve_image_paths_batch(
+    state: State<'_, DatabaseState>,
+    current_file_path: String,
+    asset_names: Vec<String>,
+) -> HashMap<String, Option<String>> {
+    let connection = state.0.lock().unwrap();
+    
+    asset_names
+        .into_iter()
+        .map(|name| {
+            let resolved = resolve_relative_path(&current_file_path, &name)
+                .or_else(|| fetch_path_from_db(&connection, &name));
+            (name, resolved)
+        })
+        .collect()
+}
+
 fn resolve_relative_path(current_file_path: &str, asset_name: &str) -> Option<String> {
     Path::new(current_file_path)
         .parent()
@@ -207,3 +231,4 @@ fn resolve_relative_path(current_file_path: &str, asset_name: &str) -> Option<St
         .filter(|path| path.exists())
         .map(|path| path.to_string_lossy().into_owned())
 }
+

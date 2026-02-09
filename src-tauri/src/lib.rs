@@ -2,20 +2,26 @@
 mod config;
 mod helper;
 mod image_cache;
+mod markdown_parse;
 use crate::helper::get_config_path;
 use crate::helper::get_path;
 use crate::image_cache::initialize_database;
 use crate::image_cache::DatabaseState;
-use crate::image_cache::{rebuild_index, resolve_image_path};
-// use gtk::prelude::GtkWindowExt;
+use crate::image_cache::{rebuild_index, resolve_image_path, resolve_image_paths_batch};
+use crate::markdown_parse::parse_markdown_to_html;
 use notify::{Config, RecursiveMode, Watcher};
 use serde_json::{json, Value};
 use std::fs;
 use std::path::Path;
-use std::sync::Mutex;
-use std::time::Instant;
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::{Arc, LazyLock, Mutex};
+use std::time::{Duration, Instant};
 use tauri::{Emitter, Listener, Manager, Window};
 use tauri_plugin_cli::CliExt;
+
+// Global state to control file watcher lifecycle (fix memory leak)
+static WATCHER_STOP_FLAG: LazyLock<Mutex<Option<Arc<AtomicBool>>>> =
+    LazyLock::new(|| Mutex::new(None));
 
 #[tauri::command]
 fn get_user_css(app_handle: tauri::AppHandle) -> Result<String, String> {
@@ -32,8 +38,11 @@ fn get_user_css(app_handle: tauri::AppHandle) -> Result<String, String> {
 async fn save_cache(app_handle: tauri::AppHandle, key: String, value: Value) -> Result<(), String> {
     let path = get_config_path(&app_handle);
 
+    // FIX #3: Use tokio::fs for async I/O instead of blocking std::fs
     let mut data = if path.exists() {
-        let content = fs::read_to_string(&path).map_err(|e| e.to_string())?;
+        let content = tokio::fs::read_to_string(&path)
+            .await
+            .map_err(|e| e.to_string())?;
         serde_json::from_str(&content).unwrap_or(json!({}))
     } else {
         json!({})
@@ -41,7 +50,9 @@ async fn save_cache(app_handle: tauri::AppHandle, key: String, value: Value) -> 
 
     data[key] = value;
 
-    fs::write(path, serde_json::to_string_pretty(&data).unwrap()).map_err(|e| e.to_string())?;
+    tokio::fs::write(path, serde_json::to_string_pretty(&data).unwrap())
+        .await
+        .map_err(|e| e.to_string())?;
     Ok(())
 }
 
@@ -52,10 +63,21 @@ async fn get_cache(app_handle: tauri::AppHandle, key: String) -> Result<Value, S
         return Ok(Value::Null);
     }
 
-    let content = fs::read_to_string(path).map_err(|e| e.to_string())?;
+    // FIX #3: Use tokio::fs for async I/O
+    let content = tokio::fs::read_to_string(path)
+        .await
+        .map_err(|e| e.to_string())?;
     let data: Value = serde_json::from_str(&content).map_err(|e| e.to_string())?;
 
     Ok(data[key].clone())
+}
+
+#[tauri::command]
+async fn save_file(path: String, content: String) -> Result<(), String> {
+    tokio::fs::write(&path, &content)
+        .await
+        .map_err(|e| format!("Failed to save file: {}", e))?;
+    Ok(())
 }
 
 // .invoke_handler(tauri::generate_handler![save_cache, get_cache, ...])
@@ -104,42 +126,85 @@ fn get_cli_file(app: tauri::AppHandle) -> Option<String> {
 
 #[tauri::command]
 fn start_watch(window: Window, path: String) {
+    // Stop previous watcher thread if exists (FIX: memory leak)
+    {
+        let mut guard = WATCHER_STOP_FLAG.lock().unwrap();
+        if let Some(old_stop) = guard.take() {
+            old_stop.store(true, Ordering::SeqCst);
+        }
+    }
+
+    // Create new stop flag for this watcher
+    let stop_flag = Arc::new(AtomicBool::new(false));
+    {
+        let mut guard = WATCHER_STOP_FLAG.lock().unwrap();
+        *guard = Some(stop_flag.clone());
+    }
+
     std::thread::spawn(move || {
         let (tx, rx) = std::sync::mpsc::channel();
-        let mut watcher = notify::RecommendedWatcher::new(tx, Config::default()).unwrap();
+        let mut watcher = match notify::RecommendedWatcher::new(tx, Config::default()) {
+            Ok(w) => w,
+            Err(e) => {
+                eprintln!("Failed to create watcher: {:?}", e);
+                return;
+            }
+        };
 
         let path_buf = Path::new(&path);
-        let parent = path_buf.parent().unwrap();
+        let parent = match path_buf.parent() {
+            Some(p) => p,
+            None => {
+                eprintln!("Invalid path: no parent directory");
+                return;
+            }
+        };
 
-        watcher.watch(parent, RecursiveMode::NonRecursive).unwrap();
+        if let Err(e) = watcher.watch(parent, RecursiveMode::NonRecursive) {
+            eprintln!("Failed to watch directory: {:?}", e);
+            return;
+        }
 
-        for res in rx {
-            match res {
-                Ok(event) => {
+        // Use timeout-based recv to check stop flag periodically
+        loop {
+            if stop_flag.load(Ordering::SeqCst) {
+                break; // Watcher cleanup: exit thread when signaled
+            }
+
+            match rx.recv_timeout(Duration::from_millis(500)) {
+                Ok(Ok(event)) => {
                     if event.paths.contains(&path_buf.to_path_buf()) && event.kind.is_modify() {
-                        std::thread::sleep(std::time::Duration::from_millis(100));
+                        std::thread::sleep(Duration::from_millis(100));
 
                         if let Ok(content) = std::fs::read_to_string(&path) {
                             let _ = window.emit("file-update", content);
                         }
                     }
                 }
-                Err(e) => println!("watch error: {:?}", e),
+                Ok(Err(e)) => eprintln!("watch error: {:?}", e),
+                Err(std::sync::mpsc::RecvTimeoutError::Timeout) => continue,
+                Err(std::sync::mpsc::RecvTimeoutError::Disconnected) => break,
             }
         }
     });
 }
 
 #[tauri::command]
-fn read_file(path: String) -> Result<String, String> {
-    let p = Path::new(&path);
-    if !p.exists() {
-        return Err(format!("Lỗi: File '{}' không tồn tại.", path));
-    }
-    if !p.is_file() {
+async fn read_file(path: String) -> Result<String, String> {
+    let p = std::path::PathBuf::from(&path);
+    
+    // Use tokio async file I/O to avoid blocking the thread pool
+    let metadata = tokio::fs::metadata(&p)
+        .await
+        .map_err(|_| format!("Lỗi: File '{}' không tồn tại.", path))?;
+    
+    if !metadata.is_file() {
         return Err(format!("Lỗi: '{}' là thư mục, không phải file.", path));
     }
-    fs::read_to_string(p).map_err(|e| format!("Không thể đọc file: {}", e))
+    
+    tokio::fs::read_to_string(&p)
+        .await
+        .map_err(|e| format!("Không thể đọc file: {}", e))
 }
 
 #[tauri::command]
@@ -148,7 +213,10 @@ fn get_config(app_handle: tauri::AppHandle) -> Result<crate::config::Config, Str
 }
 
 #[tauri::command]
-fn update_config(app_handle: tauri::AppHandle, config: crate::config::Config) -> Result<(), String> {
+fn update_config(
+    app_handle: tauri::AppHandle,
+    config: crate::config::Config,
+) -> Result<(), String> {
     helper::save_config(&app_handle, &config)
 }
 
@@ -161,7 +229,7 @@ fn get_instance_mode(app_handle: tauri::AppHandle) -> Result<bool, String> {
 #[tauri::command]
 fn open_new_file(app: tauri::AppHandle, path: String) -> Result<(), String> {
     let config = helper::load_config(&app)?;
-    
+
     // Always emit to existing window when instance mode is enabled
     // This allows files to open as new tabs instead of new windows
     if let Some(window) = app.get_webview_window("main") {
@@ -170,48 +238,48 @@ fn open_new_file(app: tauri::AppHandle, path: String) -> Result<(), String> {
         // Only create new window if no main window exists and instance mode is disabled
         return Err("No window available".to_string());
     }
-    
+
     Ok(())
 }
 
 fn create_new_window(app: &tauri::AppHandle, file_path: &str) -> Result<(), String> {
-    use tauri::{WebviewUrl, WebviewWindowBuilder};
     use std::time::{SystemTime, UNIX_EPOCH};
-    
+    use tauri::{WebviewUrl, WebviewWindowBuilder};
+
     let timestamp = SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .unwrap()
         .as_millis();
     let label = format!("window_{}", timestamp);
-    
+
     let file_name = Path::new(file_path)
         .file_name()
         .and_then(|n| n.to_str())
         .unwrap_or("ReadText");
-    
-    let window = WebviewWindowBuilder::new(
-        app,
-        label,
-        WebviewUrl::App("index.html".into())
-    )
-    .title(file_name)
-    .inner_size(800.0, 600.0)
-    .min_inner_size(600.0, 800.0)
-    .decorations(false)
-    .transparent(true)
-    .build()
-    .map_err(|e| e.to_string())?;
-    
+
+    let window = WebviewWindowBuilder::new(app, label, WebviewUrl::App("index.html".into()))
+        .title(file_name)
+        .inner_size(800.0, 600.0)
+        .min_inner_size(600.0, 800.0)
+        .decorations(false)
+        .transparent(true)
+        .build()
+        .map_err(|e| e.to_string())?;
+
     // Clone the file path to be loaded by the new window
     let path_clone = file_path.to_string();
     let window_clone = window.clone();
     window.once("window-ready", move |_| {
         let _ = window_clone.emit("load-file", path_clone);
     });
-    
+
     Ok(())
 }
 
+#[tauri::command]
+fn show_window(window: tauri::Window) {
+    window.show().unwrap();
+}
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -238,23 +306,27 @@ pub fn run() {
             //     gtk_window.set_titlebar(Option::<&gtk::Widget>::None);
             // }
 
-            println!("Time to reach setup: {:?}", start_app.elapsed());
-            let connection = initialize_database(app.handle());
-            app.manage(DatabaseState(Mutex::new(connection)));
-
-            let start_db = Instant::now();
-            println!("DB Init took: {:?}", start_db.elapsed());
+            let handle = app.handle().clone();
+            tauri::async_runtime::spawn(async move {
+                let connection = initialize_database(&handle);
+                handle.manage(DatabaseState(Mutex::new(connection)));
+                println!("DB Init finished in background");
+            });
 
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
             start_watch,
+            show_window,
             read_file,
+            save_file,
             get_cli_file,
             close_app,
             resolve_image_path,
+            resolve_image_paths_batch,
             save_cache,
             get_cache,
+            parse_markdown_to_html,
             rebuild_index,
             get_user_css,
             get_config,

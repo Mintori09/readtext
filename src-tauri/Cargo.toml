@@ -28,6 +28,10 @@ walkdir = "2.5.0"
 tauri-plugin-fs = "2"
 tauri-plugin-dialog = "2"
 rusqlite = { version = "0.38.0", features = ["bundled"] }
+pulldown-cmark = "0.13.0"
+regex = "1.12.3"
+parking_lot = "0.12"
+tokio = { version = "1", features = ["fs"] }
 
 [target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]
 tauri-plugin-cli = "2"

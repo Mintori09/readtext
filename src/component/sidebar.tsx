@@ -1,6 +1,10 @@
-import { useEffect, useState, RefObject } from "react";
+import { useEffect, useState, useRef, RefObject, memo, useCallback } from "react";
 import { invoke } from "@tauri-apps/api/core";
+import { PanelType } from "./ActivityBar";
+import { ExplorerPanel } from "./panels/ExplorerPanel";
+import { SearchPanel } from "./panels/SearchPanel";
 import "../styles/sidebar.css";
+import "../styles/panels.css";
 
 interface HeadingData {
   level: number;
@@ -24,39 +28,46 @@ interface Config {
 interface SidebarProps {
   content: string;
   scrollRef: RefObject<HTMLDivElement | null>;
-  defaultTab?: "contents" | "settings";
-  onOpenChange?: (isOpen: boolean) => void;
+  activePanel: PanelType;
+  currentPath: string | null;
+  onFileOpen?: (path: string) => void;
 }
 
 const HEADING_SELECTOR = ".prose-wrapper h1, .prose-wrapper h2, .prose-wrapper h3";
 const DEBOUNCE_DELAY_MS = 300;
 const SCROLL_OFFSET_PX = 40;
-const INTERSECTION_THRESHOLD = 0.1;
-const ROOT_MARGIN = "0px 0px -80% 0px";
 
-export const Sidebar = ({ content, scrollRef, defaultTab = "contents", onOpenChange }: SidebarProps) => {
-  const [isOpen, setIsOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState<"contents" | "settings">(defaultTab);
-  
+// FIX #6: Memoize Sidebar to prevent unnecessary re-renders
+export const Sidebar = memo(({ 
+  content, 
+  scrollRef, 
+  activePanel, 
+  currentPath,
+  onFileOpen 
+}: SidebarProps) => {
   // TOC state
   const [headings, setHeadings] = useState<HeadingData[]>([]);
   const [activeHeadingId, setActiveHeadingId] = useState<string>("");
+  
+  // FIX #5: Store heading elements to avoid double DOM query
+  const [headingElements, setHeadingElements] = useState<Element[]>([]);
   
   // Settings state
   const [config, setConfig] = useState<Config | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Notify parent when sidebar opens/closes
-  useEffect(() => {
-    onOpenChange?.(isOpen);
-  }, [isOpen, onOpenChange]);
-
-  // Parse headings for TOC
+  // FIX #5: Parse headings once, store both data and elements
   useEffect(() => {
     const parseHeadings = () => {
-      const headingElements = document.querySelectorAll(HEADING_SELECTOR);
-      const extractedHeadings = Array.from(headingElements).map((element) => ({
+      const elements = document.querySelectorAll(HEADING_SELECTOR);
+      const elementsArray = Array.from(elements);
+      
+      // Store elements for observer
+      setHeadingElements(elementsArray);
+      
+      // Extract data for rendering
+      const extractedHeadings = elementsArray.map((element) => ({
         level: parseInt(element.tagName.replace("H", ""), 10),
         text: (element as HTMLElement).innerText,
         id: element.id,
@@ -68,38 +79,62 @@ export const Sidebar = ({ content, scrollRef, defaultTab = "contents", onOpenCha
     return () => clearTimeout(debounceTimer);
   }, [content]);
 
-  // Intersection observer for active heading
+  // FIX: Track only the topmost visible heading
   useEffect(() => {
+    if (headingElements.length === 0 || !scrollRef.current) return;
+    
+    // Track which headings are currently intersecting
+    const intersectingHeadings = new Map<string, IntersectionObserverEntry>();
+    
     const observerCallback = (entries: IntersectionObserverEntry[]) => {
+      // Update the map with latest intersection states
       entries.forEach((entry) => {
         if (entry.isIntersecting) {
-          setActiveHeadingId(entry.target.id);
+          intersectingHeadings.set(entry.target.id, entry);
+        } else {
+          intersectingHeadings.delete(entry.target.id);
         }
       });
+
+      // Find the heading closest to the top of viewport
+      if (intersectingHeadings.size > 0) {
+        let topmostId: string | null = null;
+        let topmostTop = Infinity;
+        
+        intersectingHeadings.forEach((entry, id) => {
+          const rect = entry.boundingClientRect;
+          if (rect.top < topmostTop) {
+            topmostId = id;
+            topmostTop = rect.top;
+          }
+        });
+
+        if (topmostId) {
+          setActiveHeadingId(topmostId);
+        }
+      }
     };
 
     const observerOptions = {
       root: scrollRef.current,
-      rootMargin: ROOT_MARGIN,
-      threshold: INTERSECTION_THRESHOLD,
+      rootMargin: "-10% 0px -70% 0px", // Adjusted: trigger when heading is in top 30% of viewport
+      threshold: 0,
     };
 
     const observer = new IntersectionObserver(observerCallback, observerOptions);
-    const headingElements = document.querySelectorAll(HEADING_SELECTOR);
-
     headingElements.forEach((element) => observer.observe(element));
 
     return () => observer.disconnect();
-  }, [headings, scrollRef]);
+  }, [headingElements, scrollRef]);
 
   // Load config for settings
   useEffect(() => {
-    if (activeTab === "settings") {
+    if (activePanel === "settings") {
       loadConfig();
     }
-  }, [activeTab]);
+  }, [activePanel]);
 
-  const loadConfig = async () => {
+  const loadConfig = useCallback(async () => {
     try {
       const cfg = await invoke<Config>("get_config");
       setConfig(cfg);
@@ -107,9 +142,9 @@ export const Sidebar = ({ content, scrollRef, defaultTab = "contents", onOpenCha
     } catch (e) {
       setError(`Failed to load config: ${e}`);
     }
-  };
+  }, []);
 
-  const saveConfig = async () => {
+  const saveConfig = useCallback(async () => {
     if (!config) return;
 
     setIsSaving(true);
@@ -122,9 +157,9 @@ export const Sidebar = ({ content, scrollRef, defaultTab = "contents", onOpenCha
       setError(`Failed to save config: ${e}`);
       setIsSaving(false);
     }
-  };
+  }, [config]);
 
-  const handleHeadingClick = (id: string) => {
+  const handleHeadingClick = useCallback((id: string) => {
     const targetElement = document.getElementById(id);
     const container = scrollRef.current;
 
@@ -135,235 +170,374 @@ export const Sidebar = ({ content, scrollRef, defaultTab = "contents", onOpenCha
         top: scrollPosition,
         behavior: "smooth",
       });
+
+      // Add highlight animation
+      targetElement.classList.add("heading-highlight");
+      setTimeout(() => {
+        targetElement.classList.remove("heading-highlight");
+      }, 2000);
+    }
+  }, [scrollRef]);
+
+  const handleFileOpen = useCallback((path: string) => {
+    onFileOpen?.(path);
+  }, [onFileOpen]);
+
+  // Don't render if no panel is active
+  if (!activePanel) {
+    return null;
+  }
+
+  return (
+    <aside className="sidebar show">
+      {/* Explorer Panel */}
+      {activePanel === "explorer" && (
+        <ExplorerPanel 
+          currentPath={currentPath} 
+          onFileOpen={handleFileOpen}
+        />
+      )}
+
+      {/* Outline Panel (TOC) */}
+      {activePanel === "outline" && (
+        <OutlinePanel
+          headings={headings}
+          activeHeadingId={activeHeadingId}
+          onHeadingClick={handleHeadingClick}
+          scrollRef={scrollRef}
+        />
+      )}
+
+      {/* Search Panel */}
+      {activePanel === "search" && (
+        <SearchPanel content={content} scrollRef={scrollRef} />
+      )}
+
+      {/* Settings Panel */}
+      {activePanel === "settings" && (
+        <SettingsPanel
+          config={config}
+          error={error}
+          isSaving={isSaving}
+          onConfigChange={setConfig}
+          onSave={saveConfig}
+        />
+      )}
+    </aside>
+  );
+});
+
+// Enhanced Outline Panel with collapse, progress, keyboard nav
+const OutlinePanel = memo(({ 
+  headings, 
+  activeHeadingId, 
+  onHeadingClick,
+  scrollRef,
+}: { 
+  headings: HeadingData[]; 
+  activeHeadingId: string; 
+  onHeadingClick: (id: string) => void;
+  scrollRef?: React.RefObject<HTMLDivElement | null>;
+}) => {
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const [collapsedLevels, setCollapsedLevels] = useState<Set<number>>(new Set());
+  const [focusedIndex, setFocusedIndex] = useState(-1);
+  const [readProgress, setReadProgress] = useState(0);
+
+  // Calculate reading progress
+  useEffect(() => {
+    const container = scrollRef?.current;
+    if (!container) return;
+
+    const handleScroll = () => {
+      const { scrollTop, scrollHeight, clientHeight } = container;
+      const progress = Math.min(100, (scrollTop / (scrollHeight - clientHeight)) * 100);
+      setReadProgress(Math.round(progress));
+    };
+
+    container.addEventListener("scroll", handleScroll, { passive: true });
+    return () => container.removeEventListener("scroll", handleScroll);
+  }, [scrollRef]);
+
+  // Scroll active item into view
+  useEffect(() => {
+    if (!activeHeadingId || !scrollContainerRef.current) return;
+    
+    const activeItem = scrollContainerRef.current.querySelector(
+      `[data-heading-id="${activeHeadingId}"]`
+    );
+    
+    if (activeItem) {
+      activeItem.scrollIntoView({
+        behavior: "smooth",
+        block: "nearest",
+      });
+    }
+
+    // Update focused index to match active
+    const index = visibleHeadings.findIndex(h => h.id === activeHeadingId);
+    if (index !== -1) setFocusedIndex(index);
+  }, [activeHeadingId]);
+
+  // Filter visible headings based on collapsed levels
+  const visibleHeadings = headings.filter(h => !collapsedLevels.has(h.level));
+
+  // Toggle collapse for a level
+  const toggleLevel = (level: number) => {
+    setCollapsedLevels(prev => {
+      const next = new Set(prev);
+      if (next.has(level)) {
+        next.delete(level);
+      } else {
+        next.add(level);
+      }
+      return next;
+    });
+  };
+
+  // Keyboard navigation
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (visibleHeadings.length === 0) return;
+
+    switch (e.key) {
+      case "ArrowDown":
+        e.preventDefault();
+        setFocusedIndex(prev => Math.min(prev + 1, visibleHeadings.length - 1));
+        break;
+      case "ArrowUp":
+        e.preventDefault();
+        setFocusedIndex(prev => Math.max(prev - 1, 0));
+        break;
+      case "Enter":
+        e.preventDefault();
+        if (focusedIndex >= 0 && focusedIndex < visibleHeadings.length) {
+          onHeadingClick(visibleHeadings[focusedIndex].id);
+        }
+        break;
+      case "Home":
+        e.preventDefault();
+        setFocusedIndex(0);
+        break;
+      case "End":
+        e.preventDefault();
+        setFocusedIndex(visibleHeadings.length - 1);
+        break;
     }
   };
 
-  const handleTabChange = (tab: "contents" | "settings") => {
-    setActiveTab(tab);
-  };
+  // Scroll focused item into view
+  useEffect(() => {
+    if (focusedIndex < 0 || !scrollContainerRef.current) return;
+    const focusedItem = scrollContainerRef.current.querySelector(
+      `[data-index="${focusedIndex}"]`
+    );
+    focusedItem?.scrollIntoView({ block: "nearest" });
+  }, [focusedIndex]);
+
+  // Get unique levels for filter buttons
+  const levels = [...new Set(headings.map(h => h.level))].sort();
 
   return (
-    <>
-      <button
-        className={`sidebar-toggle ${isOpen ? "active" : ""}`}
-        onClick={() => setIsOpen(!isOpen)}
-        aria-label="Toggle Sidebar"
-        aria-expanded={isOpen}
-      >
-        <svg
-          width="20"
-          height="20"
-          viewBox="0 0 20 20"
-          fill="none"
-          xmlns="http://www.w3.org/2000/svg"
-          className="sidebar-icon"
-        >
-          {isOpen ? (
-            <path
-              d="M5 5L15 15M15 5L5 15"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-            />
-          ) : (
-            <>
-              <path d="M3 5H17" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-              <path d="M3 10H17" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-              <path d="M3 15H17" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-            </>
+    <div className="outline-panel" onKeyDown={handleKeyDown} tabIndex={0}>
+      <div className="panel-header">
+        <h3 className="panel-title">OUTLINE</h3>
+        <div className="outline-header-right">
+          {readProgress > 0 && (
+            <span className="outline-progress-text">{readProgress}%</span>
           )}
-        </svg>
-      </button>
-
-      <aside
-        className={`sidebar ${isOpen ? "show" : "hide"}`}
-        aria-label="Sidebar"
-      >
-        <div className="sidebar-tabs">
-          <button
-            className={`sidebar-tab ${activeTab === "contents" ? "active" : ""}`}
-            onClick={() => handleTabChange("contents")}
-            aria-current={activeTab === "contents" ? "page" : undefined}
-          >
-            <svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M3 4.5H15M3 9H15M3 13.5H15" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
-            </svg>
-            <span>Contents</span>
-          </button>
-          <button
-            className={`sidebar-tab ${activeTab === "settings" ? "active" : ""}`}
-            onClick={() => handleTabChange("settings")}
-            aria-current={activeTab === "settings" ? "page" : undefined}
-          >
-            <svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M9 11.25C10.2426 11.25 11.25 10.2426 11.25 9C11.25 7.75736 10.2426 6.75 9 6.75C7.75736 6.75 6.75 7.75736 6.75 9C6.75 10.2426 7.75736 11.25 9 11.25Z" stroke="currentColor" strokeWidth="1.5"/>
-              <path d="M14.25 9C14.25 9.3 14.235 9.585 14.205 9.87L15.885 11.13C16.035 11.25 16.08 11.46 15.99 11.625L14.385 14.37C14.295 14.535 14.1 14.595 13.92 14.535L11.94 13.755C11.52 14.07 11.07 14.34 10.575 14.535L10.275 16.62C10.245 16.8 10.095 16.935 9.9 16.935H6.69C6.495 16.935 6.345 16.8 6.315 16.62L6.015 14.535C5.52 14.34 5.07 14.07 4.65 13.755L2.67 14.535C2.49 14.595 2.295 14.535 2.205 14.37L0.6 11.625C0.51 11.46 0.555 11.25 0.705 11.13L2.385 9.87C2.355 9.585 2.34 9.3 2.34 9C2.34 8.7 2.355 8.415 2.385 8.13L0.705 6.87C0.555 6.75 0.51 6.54 0.6 6.375L2.205 3.63C2.295 3.465 2.49 3.405 2.67 3.465L4.65 4.245C5.07 3.93 5.52 3.66 6.015 3.465L6.315 1.38C6.345 1.2 6.495 1.065 6.69 1.065H9.9C10.095 1.065 10.245 1.2 10.275 1.38L10.575 3.465C11.07 3.66 11.52 3.93 11.94 4.245L13.92 3.465C14.1 3.405 14.295 3.465 14.385 3.63L15.99 6.375C16.08 6.54 16.035 6.75 15.885 6.87L14.205 8.13C14.235 8.415 14.25 8.7 14.25 9Z" stroke="currentColor" strokeWidth="1.5"/>
-            </svg>
-            <span>Settings</span>
-          </button>
-        </div>
-
-        <div className="sidebar-content">
-          {activeTab === "contents" && (
-            <div className="sidebar-section contents-section">
-              <div className="sidebar-header">
-                <h2 className="sidebar-title">Contents</h2>
-                {headings.length > 0 && (
-                  <div className="sidebar-count">{headings.length} sections</div>
-                )}
-              </div>
-
-              {headings.length === 0 ? (
-                <div className="sidebar-empty">No headings found</div>
-              ) : (
-                <div className="sidebar-scroll-area">
-                  <ul role="list">
-                    {headings.map((heading, index) => {
-                      const isActive = activeHeadingId === heading.id;
-
-                      return (
-                        <li
-                          key={`${heading.id}-${index}`}
-                          className={`sidebar-item level-${heading.level} ${isActive ? "active" : ""}`}
-                        >
-                          <button
-                            className="sidebar-link"
-                            onClick={() => handleHeadingClick(heading.id)}
-                            aria-current={isActive ? "location" : undefined}
-                          >
-                            <span className="sidebar-indicator" />
-                            <span className="sidebar-text">{heading.text}</span>
-                          </button>
-                        </li>
-                      );
-                    })}
-                  </ul>
-                </div>
-              )}
-            </div>
-          )}
-
-          {activeTab === "settings" && (
-            <div className="sidebar-section settings-section">
-              <div className="sidebar-header">
-                <h2 className="sidebar-title">Settings</h2>
-              </div>
-
-              {!config ? (
-                <div className="sidebar-loading">Loading settings...</div>
-              ) : (
-                <>
-                  <div className="sidebar-scroll-area">
-                    {error && <div className="error-message">{error}</div>}
-
-                    <section className="settings-group">
-                      <h3>Instance Mode</h3>
-                      <label className="setting-item">
-                        <input
-                          type="checkbox"
-                          checked={config.instance_mode.enabled}
-                          onChange={(e) =>
-                            setConfig({
-                              ...config,
-                              instance_mode: {
-                                ...config.instance_mode,
-                                enabled: e.target.checked,
-                              },
-                            })
-                          }
-                        />
-                        <span>Enable multi-instance mode</span>
-                        <small>Allow multiple windows to open simultaneously</small>
-                      </label>
-                    </section>
-
-                    <section className="settings-group">
-                      <h3>Features</h3>
-                      <label className="setting-item">
-                        <input
-                          type="checkbox"
-                          checked={config.features.vim_navigation}
-                          onChange={(e) =>
-                            setConfig({
-                              ...config,
-                              features: {
-                                ...config.features,
-                                vim_navigation: e.target.checked,
-                              },
-                            })
-                          }
-                        />
-                        <span>Vim-style navigation</span>
-                      </label>
-
-                      <label className="setting-item">
-                        <input
-                          type="checkbox"
-                          checked={config.features.live_reload}
-                          onChange={(e) =>
-                            setConfig({
-                              ...config,
-                              features: {
-                                ...config.features,
-                                live_reload: e.target.checked,
-                              },
-                            })
-                          }
-                        />
-                        <span>Live file reload</span>
-                      </label>
-
-                      <label className="setting-item">
-                        <input
-                          type="checkbox"
-                          checked={config.features.auto_index}
-                          onChange={(e) =>
-                            setConfig({
-                              ...config,
-                              features: {
-                                ...config.features,
-                                auto_index: e.target.checked,
-                              },
-                            })
-                          }
-                        />
-                        <span>Auto-index images on startup</span>
-                      </label>
-                    </section>
-
-                    <section className="settings-group">
-                      <h3>Search Paths</h3>
-                      <div className="search-paths-list">
-                        {config.search_paths.map((path, idx) => (
-                          <div key={idx} className="path-item">
-                            <code>{path}</code>
-                            <button
-                              onClick={() => {
-                                const newPaths = [...config.search_paths];
-                                newPaths.splice(idx, 1);
-                                setConfig({ ...config, search_paths: newPaths });
-                              }}
-                            >
-                              Remove
-                            </button>
-                          </div>
-                        ))}
-                      </div>
-                      <small>Edit config.json to add new paths</small>
-                    </section>
-                  </div>
-
-                  <div className="sidebar-footer">
-                    <button className="save-btn" onClick={saveConfig} disabled={isSaving}>
-                      {isSaving ? "Saving..." : "Save Changes"}
-                    </button>
-                  </div>
-                </>
-              )}
-            </div>
+          {headings.length > 0 && (
+            <span className="panel-count">{visibleHeadings.length}/{headings.length}</span>
           )}
         </div>
-      </aside>
-    </>
+      </div>
+
+      {/* Level filter buttons */}
+      {levels.length > 1 && (
+        <div className="outline-filters">
+          {levels.map(level => (
+            <button
+              key={level}
+              className={`outline-filter-btn ${collapsedLevels.has(level) ? "collapsed" : ""}`}
+              onClick={() => toggleLevel(level)}
+              title={collapsedLevels.has(level) ? `Show H${level}` : `Hide H${level}`}
+            >
+              H{level}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* Progress bar */}
+      <div className="outline-progress-bar">
+        <div 
+          className="outline-progress-fill" 
+          style={{ width: `${readProgress}%` }} 
+        />
+      </div>
+
+      {headings.length === 0 ? (
+        <div className="panel-empty">No headings found</div>
+      ) : visibleHeadings.length === 0 ? (
+        <div className="panel-empty">All headings hidden</div>
+      ) : (
+        <div className="panel-scroll-area" ref={scrollContainerRef} style={{ overflowY: "auto" }}>
+          <ul role="list">
+            {visibleHeadings.map((heading, index) => {
+              const isActive = activeHeadingId === heading.id;
+              const isFocused = focusedIndex === index;
+
+              return (
+                <li
+                  key={`${heading.id}-${index}`}
+                  data-heading-id={heading.id}
+                  data-index={index}
+                  className={`outline-item level-${heading.level} ${isActive ? "active" : ""} ${isFocused ? "focused" : ""}`}
+                >
+                  <button
+                    className="outline-link"
+                    onClick={() => onHeadingClick(heading.id)}
+                    aria-current={isActive ? "location" : undefined}
+                  >
+                    <span className="outline-indicator" />
+                    <span className="outline-text">{heading.text}</span>
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      )}
+    </div>
   );
-};
+});
+
+// FIX #6: Memoized Settings Panel
+const SettingsPanel = memo(({
+  config,
+  error,
+  isSaving,
+  onConfigChange,
+  onSave,
+}: {
+  config: Config | null;
+  error: string | null;
+  isSaving: boolean;
+  onConfigChange: (config: Config) => void;
+  onSave: () => void;
+}) => (
+  <div className="settings-panel">
+    <div className="panel-header">
+      <h3 className="panel-title">SETTINGS</h3>
+    </div>
+
+    {!config ? (
+      <div className="panel-loading">Loading settings...</div>
+    ) : (
+      <>
+        <div className="panel-scroll-area">
+          {error && <div className="error-message">{error}</div>}
+
+          <section className="settings-group">
+            <h4>Instance Mode</h4>
+            <label className="setting-item">
+              <input
+                type="checkbox"
+                checked={config.instance_mode.enabled}
+                onChange={(e) =>
+                  onConfigChange({
+                    ...config,
+                    instance_mode: {
+                      ...config.instance_mode,
+                      enabled: e.target.checked,
+                    },
+                  })
+                }
+              />
+              <span>Enable multi-instance mode</span>
+            </label>
+          </section>
+
+          <section className="settings-group">
+            <h4>Features</h4>
+            <label className="setting-item">
+              <input
+                type="checkbox"
+                checked={config.features.vim_navigation}
+                onChange={(e) =>
+                  onConfigChange({
+                    ...config,
+                    features: {
+                      ...config.features,
+                      vim_navigation: e.target.checked,
+                    },
+                  })
+                }
+              />
+              <span>Vim-style navigation</span>
+            </label>
+
+            <label className="setting-item">
+              <input
+                type="checkbox"
+                checked={config.features.live_reload}
+                onChange={(e) =>
+                  onConfigChange({
+                    ...config,
+                    features: {
+                      ...config.features,
+                      live_reload: e.target.checked,
+                    },
+                  })
+                }
+              />
+              <span>Live file reload</span>
+            </label>
+
+            <label className="setting-item">
+              <input
+                type="checkbox"
+                checked={config.features.auto_index}
+                onChange={(e) =>
+                  onConfigChange({
+                    ...config,
+                    features: {
+                      ...config.features,
+                      auto_index: e.target.checked,
+                    },
+                  })
+                }
+              />
+              <span>Auto-index images</span>
+            </label>
+          </section>
+
+          <section className="settings-group">
+            <h4>Search Paths</h4>
+            <div className="search-paths-list">
+              {config.search_paths.map((path, idx) => (
+                <div key={idx} className="path-item">
+                  <code>{path}</code>
+                  <button
+                    onClick={() => {
+                      const newPaths = [...config.search_paths];
+                      newPaths.splice(idx, 1);
+                      onConfigChange({ ...config, search_paths: newPaths });
+                    }}
+                  >
+                    ×
+                  </button>
+                </div>
+              ))}
+            </div>
+          </section>
+        </div>
+
+        <div className="panel-footer">
+          <button className="save-btn" onClick={onSave} disabled={isSaving}>
+            {isSaving ? "Saving..." : "Save Changes"}
+          </button>
+        </div>
+      </>
+    )}
+  </div>
+));

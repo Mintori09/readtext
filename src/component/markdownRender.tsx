@@ -1,69 +1,123 @@
-import Markdown from "react-markdown";
-import remarkGfm from "remark-gfm";
-import remarkFrontmatter from "remark-frontmatter";
-import rehypeSlug from "rehype-slug";
-import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
-import { oneLight as style } from "react-syntax-highlighter/dist/esm/styles/prism";
-import { ImageComponent } from "./imageComponent";
+import { useEffect, useState, useRef, memo } from "react";
+import { invoke } from "@tauri-apps/api/core";
+import { convertFileSrc } from "@tauri-apps/api/core";
+import Prism from "prismjs";
+import { ImageProvider, useImageContext } from "../context/ImageContext";
 
 interface MarkdownRendererProps {
   content: string;
   currentPath: string | null;
 }
 
-export const MarkdownRenderer = ({
-  content,
-  currentPath,
-}: MarkdownRendererProps) => {
-  const processedContent = content.replace(/!\[\[(.*?)\]\]/g, "![$1]($1)");
+// FIX #6: Memoize to prevent unnecessary re-renders
+export const MarkdownRenderer = memo(({ content, currentPath }: MarkdownRendererProps) => {
+  const [htmlContent, setHtmlContent] = useState("");
+  const containerRef = useRef<HTMLDivElement>(null);
 
-  const components = {
-    img: (props: any) => (
-      <ImageComponent {...props} currentPath={currentPath} />
-    ),
-    code({ inline, className, children, ...props }: any) {
-      const match = /language-(\w+)/.exec(className || "");
-      return !inline && match ? (
-        <div className="code-block-wrapper">
-          <div className="code-lang-tag">{match[1]}</div>
-          <SyntaxHighlighter
-            style={style}
-            language={match[1]}
-            PreTag="div"
-            customStyle={{
-              padding: "20px",
-              fontSize: "0.95rem",
-              backgroundColor: "#f8f9fa",
-              borderRadius: "0 0 12px 12px",
-              border: "1px solid #eee",
-              margin: 0,
-            }}
-          >
-            {String(children).replace(/\n$/, "")}
-          </SyntaxHighlighter>
-        </div>
-      ) : (
-        <code className="inline-code" {...props}>
-          {children}
-        </code>
-      );
-    },
-    table: ({ children }: any) => (
-      <div className="table-wrapper">
-        <table>{children}</table>
-      </div>
-    ),
-  };
+  useEffect(() => {
+    invoke<string>("parse_markdown_to_html", { content }).then((html) => {
+      setHtmlContent(html);
+    });
+  }, [content]);
+
+  // Highlight code blocks only within container
+  useEffect(() => {
+    if (containerRef.current && htmlContent) {
+      requestAnimationFrame(() => {
+        containerRef.current?.querySelectorAll("pre code").forEach((block) => {
+          Prism.highlightElement(block as HTMLElement);
+        });
+      });
+    }
+  }, [htmlContent]);
 
   return (
-    <div className="prose-wrapper">
-      <Markdown
-        remarkPlugins={[remarkGfm, remarkFrontmatter]}
-        rehypePlugins={[rehypeSlug]}
-        components={components}
-      >
-        {processedContent}
-      </Markdown>
-    </div>
+    <ImageProvider htmlContent={htmlContent} currentPath={currentPath}>
+      <MarkdownContent htmlContent={htmlContent} containerRef={containerRef} />
+    </ImageProvider>
   );
-};
+});
+
+// Inner component that uses image context
+const MarkdownContent = memo(({ 
+  htmlContent, 
+  containerRef 
+}: { 
+  htmlContent: string; 
+  containerRef: React.RefObject<HTMLDivElement | null>;
+}) => {
+  const { resolvedPaths } = useImageContext();
+  const [processedHtml, setProcessedHtml] = useState(htmlContent);
+
+  // Replace image srcs with resolved paths
+  useEffect(() => {
+    if (!htmlContent || resolvedPaths.size === 0) {
+      setProcessedHtml(htmlContent);
+      return;
+    }
+
+    let newHtml = htmlContent;
+    resolvedPaths.forEach((resolvedPath, originalSrc) => {
+      if (resolvedPath) {
+        const assetUrl = convertFileSrc(resolvedPath)
+          .replace(/ /g, "%20")
+          .replace(/\[/g, "%5B")
+          .replace(/\]/g, "%5D");
+        
+        // Replace src attribute
+        newHtml = newHtml.replace(
+          new RegExp(`src=["']${escapeRegex(originalSrc)}["']`, "g"),
+          `src="${assetUrl}"`
+        );
+      }
+    });
+
+    setProcessedHtml(newHtml);
+  }, [htmlContent, resolvedPaths]);
+
+  // Generate IDs for headings that don't have them
+  useEffect(() => {
+    if (!containerRef.current) return;
+    
+    const headings = containerRef.current.querySelectorAll("h1, h2, h3, h4, h5, h6");
+    const usedIds = new Set<string>();
+    
+    headings.forEach((heading, index) => {
+      if (!heading.id) {
+        // Create slug from text content
+        let slug = heading.textContent
+          ?.toLowerCase()
+          .trim()
+          .replace(/[^\w\s-]/g, "") // Remove special chars
+          .replace(/\s+/g, "-") // Replace spaces with hyphens
+          .replace(/-+/g, "-") // Remove duplicate hyphens
+          || `heading-${index}`;
+        
+        // Ensure unique ID
+        let uniqueSlug = slug;
+        let counter = 1;
+        while (usedIds.has(uniqueSlug)) {
+          uniqueSlug = `${slug}-${counter}`;
+          counter++;
+        }
+        
+        heading.id = uniqueSlug;
+        usedIds.add(uniqueSlug);
+      } else {
+        usedIds.add(heading.id);
+      }
+    });
+  }, [processedHtml]);
+
+  return (
+    <div
+      ref={containerRef}
+      className="prose-wrapper"
+      dangerouslySetInnerHTML={{ __html: processedHtml }}
+    />
+  );
+});
+
+function escapeRegex(string: string): string {
+  return string.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}

@@ -14,6 +14,7 @@
       {
         "title": "readtext",
         "width": 800,
+        "visible": false,
         "height": 600,
         "minWidth": 600,
         "minHeight": 800,
@@ -25,9 +26,7 @@
       "csp": "default-src 'self'; img-src 'self' asset: https://asset.localhost https://* http://* data:; connect-src 'self' ipc:;",
       "assetProtocol": {
         "enable": true,
-        "scope": [
-          "**/**"
-        ]
+        "scope": ["**/**"]
       }
     }
   },
@@ -43,9 +42,7 @@
     ],
     "fileAssociations": [
       {
-        "ext": [
-          "md"
-        ],
+        "ext": ["md"],
         "mimeType": "image/plaintext",
         "rank": "Default"
       }

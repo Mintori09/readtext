@@ -1,7 +1,12 @@
 use crate::config::Config;
+use parking_lot::RwLock;
 use std::fs;
 use std::path::PathBuf;
+use std::sync::LazyLock;
 use tauri::Manager;
+
+// FIX #4: Cache config in memory to avoid repeated disk reads
+static CONFIG_CACHE: LazyLock<RwLock<Option<Config>>> = LazyLock::new(|| RwLock::new(None));
 
 pub fn get_path(app_handle: &tauri::AppHandle, file: &str) -> PathBuf {
     let mut path = app_handle
@@ -18,6 +23,15 @@ pub fn get_path(app_handle: &tauri::AppHandle, file: &str) -> PathBuf {
 }
 
 pub fn get_config(app_handle: &tauri::AppHandle) -> Result<Config, Box<dyn std::error::Error>> {
+    // Check cache first
+    {
+        let cache = CONFIG_CACHE.read();
+        if let Some(ref config) = *cache {
+            return Ok(config.clone());
+        }
+    }
+    
+    // Load from disk
     let config_path = get_path(app_handle, "config.json");
 
     if !config_path.exists() {
@@ -26,6 +40,12 @@ pub fn get_config(app_handle: &tauri::AppHandle) -> Result<Config, Box<dyn std::
 
     let config_data = fs::read_to_string(&config_path)?;
     let config: Config = serde_json::from_str(&config_data)?;
+    
+    // Update cache
+    {
+        let mut cache = CONFIG_CACHE.write();
+        *cache = Some(config.clone());
+    }
 
     Ok(config)
 }
@@ -35,6 +55,14 @@ pub fn get_config_path(app_handle: &tauri::AppHandle) -> PathBuf {
 }
 
 pub fn load_config(app_handle: &tauri::AppHandle) -> Result<Config, String> {
+    // Check cache first
+    {
+        let cache = CONFIG_CACHE.read();
+        if let Some(ref config) = *cache {
+            return Ok(config.clone());
+        }
+    }
+    
     let path = get_path(app_handle, "config.json");
     
     if !path.exists() {
@@ -44,7 +72,15 @@ pub fn load_config(app_handle: &tauri::AppHandle) -> Result<Config, String> {
     }
     
     let content = fs::read_to_string(&path).map_err(|e| e.to_string())?;
-    serde_json::from_str(&content).map_err(|e| e.to_string())
+    let config: Config = serde_json::from_str(&content).map_err(|e| e.to_string())?;
+    
+    // Update cache
+    {
+        let mut cache = CONFIG_CACHE.write();
+        *cache = Some(config.clone());
+    }
+    
+    Ok(config)
 }
 
 pub fn save_config(app_handle: &tauri::AppHandle, config: &Config) -> Result<(), String> {
@@ -55,6 +91,13 @@ pub fn save_config(app_handle: &tauri::AppHandle, config: &Config) -> Result<(),
     }
     
     let json = serde_json::to_string_pretty(config).map_err(|e| e.to_string())?;
-    fs::write(path, json).map_err(|e| e.to_string())
+    fs::write(path, json).map_err(|e| e.to_string())?;
+    
+    // Invalidate cache after save
+    {
+        let mut cache = CONFIG_CACHE.write();
+        *cache = Some(config.clone());
+    }
+    
+    Ok(())
 }
-
