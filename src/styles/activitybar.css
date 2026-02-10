@@ -39,11 +39,11 @@
 }
 
 .activity-bar-item:hover {
-    color: #ffffff;
+    color: var(--text-main);
 }
 
 .activity-bar-item.active {
-    color: #ffffff;
+    color: var(--text-main);
 }
 
 .activity-bar-item svg {
@@ -57,7 +57,7 @@
     top: 0;
     bottom: 0;
     width: 2px;
-    background: #ffffff;
+    background: var(--text-main);
 }
 
 /* Tooltip styles */
@@ -67,14 +67,14 @@
     left: 52px;
     top: 50%;
     transform: translateY(-50%);
-    background: #252526;
-    color: #cccccc;
+    background: var(--bg-panel-header);
+    color: var(--text-panel-header);
     padding: 4px 8px;
     border-radius: 3px;
     font-size: 12px;
     white-space: nowrap;
     z-index: 2000;
-    border: 1px solid #454545;
+    border: 1px solid var(--border-panel);
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
 }
 
@@ -82,7 +82,7 @@
 .activity-bar-separator {
     width: 24px;
     height: 1px;
-    background: #454545;
+    background: var(--border-panel);
     margin: 8px 0;
 }
 

@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { invoke } from "@tauri-apps/api/core";
-import { Tab } from "../types";
-import { TAURI_COMMANDS } from "../constants";
+import { Tab } from "../../../types";
+import { TAURI_COMMANDS } from "../../../utils/constants";
 
 export interface TabsHook {
     tabs: Tab[];

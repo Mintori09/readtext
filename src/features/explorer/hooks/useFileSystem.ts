@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
-import { DEFAULT_CONTENT, TAURI_COMMANDS, EVENTS } from "../constants";
+import { DEFAULT_CONTENT, TAURI_COMMANDS, EVENTS } from "../../../utils/constants";
 
 export interface FileSystemHook {
     content: string;

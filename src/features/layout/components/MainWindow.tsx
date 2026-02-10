@@ -1,14 +1,10 @@
-import { Sidebar } from "./sidebar";
+import { Sidebar } from "./Sidebar";
 import { ActivityBar } from "./ActivityBar";
-import { PanelType, ViewMode } from "../types";
-import { MarkdownRenderer } from "./markdownRender";
-import { MarkdownEditor, MarkdownEditorHandle } from "./MarkdownEditor";
-import { useTheme } from "../hooks/useTheme";
+import { PanelType, ViewMode } from "../../../types";
+import { MarkdownRenderer, MarkdownEditor, MarkdownEditorHandle, useZoom, useVim } from "../../editor";
+import { useTheme, useConfig } from "../../settings";
 import { useEffect, useRef, useState, useCallback } from "react";
-import { useZoom } from "../hooks/useZoom";
-import { useVim } from "../hooks/useVim";
 import { invoke } from "@tauri-apps/api/core";
-import { useConfig } from "../hooks/useConfig";
 
 
 export const MainWindow = ({
@@ -255,6 +251,7 @@ export const MainWindow = ({
         currentPath={currentPath}
         rootPath={rootPath}
         onFileOpen={handleFileOpen}
+        theme={theme}
       />
 
       <div className={`content-wrapper view-${viewMode}`}>

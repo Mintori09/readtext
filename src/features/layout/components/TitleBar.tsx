@@ -1,6 +1,6 @@
 import { getCurrentWindow } from "@tauri-apps/api/window";
-import "../styles/titleBar.css";
-import { Tab } from "../types";
+import "../../../styles/titleBar.css";
+import { Tab } from "../../../types";
 
 const appWindow = getCurrentWindow();
 

@@ -1,12 +1,16 @@
 import { memo } from "react";
-import { useConfig } from "../../hooks/useConfig";
-import "../../styles/settings.css";
+import { useConfig } from "../hooks/useConfig";
+import "../../../styles/settings.css";
 
-export const SettingsPanel = memo(() => {
+interface SettingsPanelProps {
+  theme: "light" | "dark";
+}
+
+export const SettingsPanel = memo(({ theme }: SettingsPanelProps) => {
   const { config, setConfig, isSaving, error, saveConfig } = useConfig();
 
   return (
-    <div className="settings-panel">
+    <div className="settings-panel" data-theme={theme}>
       <div className="panel-header">
         <h3 className="panel-title">SETTINGS</h3>
       </div>
@@ -95,7 +99,7 @@ export const SettingsPanel = memo(() => {
             <section className="settings-group">
               <h4>Search Paths</h4>
               <div className="search-paths-list">
-                {config.search_paths.map((path, idx) => (
+                {config.search_paths.map((path: string, idx: number) => (
                   <div key={idx} className="path-item">
                     <code>{path}</code>
                     <button

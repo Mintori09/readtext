@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
-import { FileSystemHook } from "./useFileSystem";
-import { TabsHook } from "./useTabs";
-import { TAURI_COMMANDS, EVENTS, SELECT_FILE_MSG, NO_FILES_OPEN } from "../constants";
+import { FileSystemHook } from "../features/explorer";
+import { TabsHook } from "../features/layout";
+import { TAURI_COMMANDS, EVENTS, SELECT_FILE_MSG, NO_FILES_OPEN } from "../utils/constants";
 import { Tab, PanelType } from "../types";
 
 interface UseAppInitProps {

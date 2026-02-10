@@ -286,5 +286,5 @@ export const ExplorerPanel = memo(({ currentPath, rootPath, onFileOpen }: Explor
   );
 });
 
-import { ChevronRightIcon, ChevronDownIcon, FileIcon } from "../Icons";
+import { ChevronRightIcon, ChevronDownIcon, FileIcon } from "../../../components/Icons";
 

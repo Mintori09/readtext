@@ -11,8 +11,8 @@
     left: 0;
     right: 0;
     user-select: none;
-    border-bottom: 0.5px solid rgba(0, 0, 0, 0.3);
-    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.03);
+    border-bottom: 1px solid var(--border-sidebar);
+    box-shadow: 0 1px 0 var(--border-subtle);
     z-index: 9999;
     padding: 0 12px;
     gap: 12px;
@@ -95,7 +95,7 @@
 .title {
     font-size: 13px;
     font-weight: 500;
-    color: rgba(255, 255, 255, 0.85);
+    color: var(--text-titlebar);
     font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
     white-space: nowrap;
     overflow: hidden;
@@ -107,8 +107,8 @@
 }
 
 .settings-btn {
-    background: rgba(255, 255, 255, 0.08);
-    border: 0.5px solid rgba(255, 255, 255, 0.1);
+    background: var(--bg-item-hover);
+    border: 0.5px solid var(--border-panel);
     border-radius: 5px;
     padding: 5px 9px;
     cursor: pointer;
@@ -116,17 +116,17 @@
     transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
     flex-shrink: 0;
     box-shadow:
-        inset 0 0.5px 0 rgba(255, 255, 255, 0.1),
-        0 1px 2px rgba(0, 0, 0, 0.2);
+        inset 0 0.5px 0 var(--border-subtle),
+        0 1px 2px rgba(0, 0, 0, 0.1);
 }
 
 .settings-btn:hover {
-    background: rgba(255, 255, 255, 0.12);
-    border-color: rgba(255, 255, 255, 0.15);
+    background: var(--bg-item-active);
+    border-color: var(--accent);
     transform: translateY(-0.5px);
     box-shadow:
-        inset 0 0.5px 0 rgba(255, 255, 255, 0.15),
-        0 2px 4px rgba(0, 0, 0, 0.25);
+        inset 0 0.5px 0 var(--border-subtle),
+        0 2px 4px rgba(0, 0, 0, 0.15);
 }
 
 .settings-btn:active {
@@ -148,7 +148,7 @@
     padding: 4px 0;
     max-width: calc(100% - 220px);
     scrollbar-width: thin;
-    scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
+    scrollbar-color: var(--text-panel-muted) transparent;
 }
 
 .tabs-list::-webkit-scrollbar-thumb {}
@@ -180,17 +180,17 @@
     align-items: center;
     gap: 8px;
     padding: 5px 12px;
-    background: rgba(255, 255, 255, 0.06);
+    background: var(--bg-item-hover);
     border-radius: 5px;
     cursor: pointer;
     transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
     max-width: 200px;
     min-width: 100px;
-    border: 0.5px solid rgba(255, 255, 255, 0.08);
+    border: 0.5px solid var(--border-panel);
     flex-shrink: 0;
     box-shadow:
-        inset 0 0.5px 0 rgba(255, 255, 255, 0.08),
-        0 1px 2px rgba(0, 0, 0, 0.15);
+        inset 0 0.5px 0 var(--border-subtle),
+        0 1px 2px rgba(0, 0, 0, 0.1);
 }
 
 .tab.active {
@@ -210,7 +210,7 @@
 .tab-name {
     font-size: 12px;
     font-weight: 500;
-    color: rgba(255, 255, 255, 0.75);
+    color: var(--text-panel-subtitle);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -220,7 +220,7 @@
 }
 
 .tab.active .tab-name {
-    color: rgba(255, 255, 255, 0.95);
+    color: var(--text-panel-item);
     font-weight: 600;
 }
 
@@ -256,8 +256,8 @@
 }
 
 .new-tab-btn {
-    background: rgba(255, 255, 255, 0.08);
-    border: 0.5px solid rgba(255, 255, 255, 0.1);
+    background: var(--bg-item-hover);
+    border: 0.5px solid var(--border-panel);
     border-radius: 5px;
     width: 26px;
     height: 26px;
@@ -265,15 +265,15 @@
     align-items: center;
     justify-content: center;
     cursor: pointer;
-    color: rgba(255, 255, 255, 0.75);
+    color: var(--text-panel-subtitle);
     font-size: 18px;
     font-weight: 300;
     line-height: 1;
     transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
     flex-shrink: 0;
     box-shadow:
-        inset 0 0.5px 0 rgba(255, 255, 255, 0.1),
-        0 1px 2px rgba(0, 0, 0, 0.2);
+        inset 0 0.5px 0 var(--border-subtle),
+        0 1px 2px rgba(0, 0, 0, 0.1);
 }
 
 .new-tab-btn:hover {

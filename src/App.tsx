@@ -3,13 +3,10 @@ import { open } from "@tauri-apps/plugin-dialog";
 import "./styles/markdown.css";
 import "./styles/print.css";
 
-import { MainWindow } from "./component/mainWindow";
-import TitleBar from "./component/titleBar";
-import { PanelType } from "./types";
-
-import { useFileSystem } from "./hooks/useFileSystem";
-import { useTabs } from "./hooks/useTabs";
+import { MainWindow, TitleBar, useTabs } from "./features/layout";
+import { useFileSystem } from "./features/explorer";
 import { useAppInit } from "./hooks/useAppInit";
+import { PanelType } from "./types";
 
 export default function App() {
   const [defaultActivePanel, setDefaultActivePanel] = useState<PanelType>(null);

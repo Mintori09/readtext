@@ -1,5 +1,5 @@
-import "../styles/activitybar.css";
-import { ViewMode, PanelType } from "../types";
+import "../../../styles/activitybar.css";
+import { ViewMode, PanelType } from "../../../types";
 import { 
   ExplorerIcon, 
   OutlineIcon, 
@@ -11,7 +11,7 @@ import {
   SaveIcon,
   SunIcon,
   MoonIcon
-} from "./Icons";
+} from "../../../components/Icons";
 
 interface ActivityBarProps {
   activePanel: PanelType;

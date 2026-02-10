@@ -1,4 +1,4 @@
-import { useImageContext } from "../context/ImageContext";
+import { useImageContext } from "../../../context/ImageContext";
 import { memo } from "react";
 
 interface ImageComponentProps {

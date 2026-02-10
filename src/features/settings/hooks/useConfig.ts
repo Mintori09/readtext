@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { invoke } from "@tauri-apps/api/core";
-import { Config } from "../types";
+import { Config } from "../../../types";
 
 export function useConfig() {
     const [config, setConfig] = useState<Config | null>(null);

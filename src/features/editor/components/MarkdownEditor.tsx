@@ -5,7 +5,7 @@ import { markdown } from "@codemirror/lang-markdown";
 import { defaultKeymap, history, historyKeymap } from "@codemirror/commands";
 import { oneDark } from "@codemirror/theme-one-dark";
 import { syntaxHighlighting, defaultHighlightStyle } from "@codemirror/language";
-import { ViewMode } from "../types";
+import { ViewMode } from "../../../types";
 
 export interface MarkdownEditorHandle {
   scrollToPercent: (percent: number) => void;
@@ -140,8 +140,7 @@ export const MarkdownEditor = memo(forwardRef<MarkdownEditorHandle, MarkdownEdit
     if (!containerRef.current) return;
 
     // Determine initial theme
-    // User requested split view default to light mode
-    const isLightMode = theme === "light" || viewMode === "split";
+    const isLightMode = theme === "light";
     const initialThemeExtensions = isLightMode 
       ? [lightTheme] 
       : [oneDark, darkTheme];
@@ -196,7 +195,7 @@ export const MarkdownEditor = memo(forwardRef<MarkdownEditorHandle, MarkdownEdit
   useEffect(() => {
     if (!viewRef.current) return;
 
-    const isLightMode = theme === "light" || viewMode === "split";
+    const isLightMode = theme === "light";
     const themeExtensions = isLightMode 
       ? [lightTheme]
       : [oneDark, darkTheme];
@@ -204,7 +203,7 @@ export const MarkdownEditor = memo(forwardRef<MarkdownEditorHandle, MarkdownEdit
     viewRef.current.dispatch({
       effects: themeCompartment.current.reconfigure(themeExtensions)
     });
-  }, [viewMode]);
+  }, [theme, viewMode]);
 
   // Update content changes
   useEffect(() => {

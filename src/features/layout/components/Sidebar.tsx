@@ -1,11 +1,11 @@
 import { useEffect, useState, RefObject, memo, useCallback } from "react";
-import { PanelType, HeadingData } from "../types";
-import { ExplorerPanel } from "./panels/ExplorerPanel";
-import { SearchPanel } from "./panels/SearchPanel";
-import { OutlinePanel } from "./panels/OutlinePanel";
-import { SettingsPanel } from "./panels/SettingsPanel";
-import "../styles/sidebar.css";
-import "../styles/panels.css";
+import { PanelType, HeadingData } from "../../../types";
+import { ExplorerPanel } from "../../explorer";
+import { SearchPanel } from "../../search";
+import { OutlinePanel } from "../../outline";
+import { SettingsPanel } from "../../settings";
+import "../../../styles/sidebar.css";
+import "../../../styles/panels.css";
 
 interface SidebarProps {
   content: string;
@@ -14,6 +14,7 @@ interface SidebarProps {
   currentPath: string | null;
   rootPath?: string | null;
   onFileOpen?: (path: string) => void;
+  theme: "light" | "dark";
 }
 
 const HEADING_SELECTOR = ".prose-wrapper h1, .prose-wrapper h2, .prose-wrapper h3";
@@ -26,7 +27,8 @@ export const Sidebar = memo(({
   activePanel, 
   currentPath,
   rootPath,
-  onFileOpen 
+  onFileOpen,
+  theme 
 }: SidebarProps) => {
   // TOC state
   const [headings, setHeadings] = useState<HeadingData[]>([]);
@@ -124,7 +126,7 @@ export const Sidebar = memo(({
   if (!activePanel) return null;
 
   return (
-    <aside className="sidebar show">
+    <aside className="sidebar show" data-theme={theme}>
       {activePanel === "explorer" && (
         <ExplorerPanel 
           currentPath={currentPath} 
@@ -146,7 +148,7 @@ export const Sidebar = memo(({
         <SearchPanel content={content} scrollRef={scrollRef} />
       )}
 
-      {activePanel === "settings" && <SettingsPanel />}
+      {activePanel === "settings" && <SettingsPanel theme={theme} />}
     </aside>
   );
 });

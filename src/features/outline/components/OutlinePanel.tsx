@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef, memo } from "react";
-import { HeadingData } from "../../types";
-import "../../styles/panels.css";
+import { HeadingData } from "../../../types";
+import "../../../styles/panels.css";
 
 interface OutlinePanelProps {
   headings: HeadingData[];
