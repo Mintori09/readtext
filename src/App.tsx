@@ -81,7 +81,7 @@ export default function App() {
   };
 
   return (
-    <div>
+    <div className="window-flex-container">
       <TitleBar
         titleBar={fileSystem.currentPath}
         instanceMode={tabs.instanceMode}

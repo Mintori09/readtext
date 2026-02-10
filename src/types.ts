@@ -19,6 +19,7 @@ export interface Config {
         live_reload: boolean;
         auto_index: boolean;
     };
+    theme: "light" | "dark";
 }
 
 export interface HeadingData {

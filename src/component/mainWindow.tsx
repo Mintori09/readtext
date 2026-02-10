@@ -8,6 +8,7 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import { useZoom } from "../hooks/useZoom";
 import { useVim } from "../hooks/useVim";
 import { invoke } from "@tauri-apps/api/core";
+import { useConfig } from "../hooks/useConfig";
 
 
 export const MainWindow = ({
@@ -26,9 +27,31 @@ export const MainWindow = ({
   defaultActivePanel?: PanelType;
 }) => {
   useTheme();
+  const { config, saveConfig } = useConfig();
   const scrollRef = useRef<HTMLDivElement>(null);
   const [activePanel, setActivePanel] = useState<PanelType>(defaultActivePanel || null);
-  
+  const [theme, setTheme] = useState<"light" | "dark">("light");
+
+  // Sync theme with config
+  useEffect(() => {
+    if (config?.theme) {
+      setTheme(config.theme);
+    }
+  }, [config?.theme]);
+
+  // Apply theme to document
+  useEffect(() => {
+    document.documentElement.setAttribute("data-theme", theme);
+  }, [theme]);
+
+  const handleThemeToggle = useCallback(() => {
+    const newTheme = theme === "light" ? "dark" : "light";
+    setTheme(newTheme);
+    if (config) {
+      saveConfig({ ...config, theme: newTheme });
+    }
+  }, [theme, config, saveConfig]);
+
   // Update active panel when default changes (e.g. from CLI dir open)
   useEffect(() => {
     if (defaultActivePanel) {
@@ -221,6 +244,8 @@ export const MainWindow = ({
         onViewModeChange={setViewMode}
         hasUnsavedChanges={hasUnsavedChanges}
         onSave={handleSave}
+        theme={theme}
+        onThemeToggle={handleThemeToggle}
       />
       
       <Sidebar
@@ -242,6 +267,7 @@ export const MainWindow = ({
               onSave={handleSave}
               viewMode={viewMode}
               onScroll={handleEditorScroll}
+              theme={theme}
             />
           </div>
         )}

@@ -1,6 +1,6 @@
 .titlebar {
     height: 38px;
-    background: linear-gradient(to bottom, #2d2d2d 0%, #262626 100%);
+    background: var(--bg-titlebar);
     backdrop-filter: blur(20px) saturate(180%);
     -webkit-backdrop-filter: blur(20px) saturate(180%);
     display: flex;

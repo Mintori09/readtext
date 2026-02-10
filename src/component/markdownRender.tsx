@@ -1,6 +1,5 @@
 import { useEffect, useState, useRef, memo } from "react";
 import { invoke } from "@tauri-apps/api/core";
-import { convertFileSrc } from "@tauri-apps/api/core";
 import Prism from "prismjs";
 import { ImageProvider, useImageContext } from "../context/ImageContext";
 
@@ -46,7 +45,7 @@ const MarkdownContent = memo(({
   htmlContent: string; 
   containerRef: React.RefObject<HTMLDivElement | null>;
 }) => {
-  const { resolvedPaths } = useImageContext();
+  const { resolvedPaths, transformUrl } = useImageContext();
   const [processedHtml, setProcessedHtml] = useState(htmlContent);
 
   // Replace image srcs with resolved paths
@@ -59,10 +58,7 @@ const MarkdownContent = memo(({
     let newHtml = htmlContent;
     resolvedPaths.forEach((resolvedPath, originalSrc) => {
       if (resolvedPath) {
-        const assetUrl = convertFileSrc(resolvedPath)
-          .replace(/ /g, "%20")
-          .replace(/\[/g, "%5B")
-          .replace(/\]/g, "%5D");
+        const assetUrl = transformUrl(resolvedPath);
         
         // Replace src attribute
         newHtml = newHtml.replace(
@@ -73,7 +69,7 @@ const MarkdownContent = memo(({
     });
 
     setProcessedHtml(newHtml);
-  }, [htmlContent, resolvedPaths]);
+  }, [htmlContent, resolvedPaths, transformUrl]);
 
   // Generate IDs for headings that don't have them
   useEffect(() => {

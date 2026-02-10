@@ -18,6 +18,7 @@ interface MarkdownEditorProps {
   onSave?: () => void;
   viewMode?: ViewMode;
   onScroll?: (percent: number) => void;
+  theme?: "light" | "dark";
 }
 
 // Base layout theme
@@ -98,7 +99,8 @@ export const MarkdownEditor = memo(forwardRef<MarkdownEditorHandle, MarkdownEdit
   onChange, 
   onSave,
   viewMode,
-  onScroll 
+  onScroll,
+  theme = "dark"
 }, ref) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
@@ -138,10 +140,11 @@ export const MarkdownEditor = memo(forwardRef<MarkdownEditorHandle, MarkdownEdit
     if (!containerRef.current) return;
 
     // Determine initial theme
-    const isLightMode = viewMode === "edit";
+    // User requested split view default to light mode
+    const isLightMode = theme === "light" || viewMode === "split";
     const initialThemeExtensions = isLightMode 
-      ? [lightTheme] // Light mode only triggers when specifically in edit mode
-      : [oneDark, darkTheme]; // Default/Split/Preview use dark mode
+      ? [lightTheme] 
+      : [oneDark, darkTheme];
 
     const extensions: Extension[] = [
       lineNumbers(),
@@ -193,7 +196,7 @@ export const MarkdownEditor = memo(forwardRef<MarkdownEditorHandle, MarkdownEdit
   useEffect(() => {
     if (!viewRef.current) return;
 
-    const isLightMode = viewMode === "edit";
+    const isLightMode = theme === "light" || viewMode === "split";
     const themeExtensions = isLightMode 
       ? [lightTheme]
       : [oneDark, darkTheme];
@@ -228,7 +231,7 @@ export const MarkdownEditor = memo(forwardRef<MarkdownEditorHandle, MarkdownEdit
       style={{
         height: "100%",
         // Background color logic moved to CodeMirror themes, but we set a default here to avoid flashes
-        backgroundColor: viewMode === "edit" ? "#ffffff" : "#1e1e1e", 
+        backgroundColor: "var(--bg-color)", 
         overflow: "hidden",
       }}
     />

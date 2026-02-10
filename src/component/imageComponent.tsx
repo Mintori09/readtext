@@ -1,86 +1,69 @@
-import { convertFileSrc, invoke } from "@tauri-apps/api/core";
-import { useEffect, useState } from "react";
+import { useImageContext } from "../context/ImageContext";
+import { memo } from "react";
 
-export const ImageComponent = ({
-  src,
-  alt,
-  currentPath,
-}: {
+interface ImageComponentProps {
   src?: string;
   alt?: string;
-  currentPath: string | null;
-}) => {
-  const [resolvedSrc, setResolvedSrc] = useState<string>("");
-  const [error, setError] = useState(false);
+}
 
-  useEffect(() => {
-    let isMounted = true;
-    const resolvePath = async () => {
-      if (!src) return;
-      if (src.startsWith("http")) {
-        setResolvedSrc(src);
-        return;
-      }
-      try {
-        const absolutePath = await invoke<string | null>("resolve_image_path", {
-          currentFilePath: currentPath,
-          assetName: src,
-        });
-        if (isMounted && absolutePath) {
-          const assetUrl = convertFileSrc(absolutePath);
-          setResolvedSrc(
-            assetUrl
-              .replace(/ /g, "%20")
-              .replace(/\[/g, "%5B")
-              .replace(/\]/g, "%5D"),
-          );
-        }
-      } catch (err) {
-        if (isMounted) setError(true);
-      }
-    };
-    resolvePath();
-    return () => {
-      isMounted = false;
-    };
-  }, [src, currentPath]);
+export const ImageComponent = memo(({ src, alt }: ImageComponentProps) => {
+  const { resolvedPaths, transformUrl, isLoading } = useImageContext();
+  
+  if (!src) return null;
+
+  // Handle external URLs immediately
+  if (src.startsWith("http")) {
+    return (
+      <span className="image-wrapper" style={wrapperStyle}>
+        <img src={src} alt={alt} style={imgStyle} />
+        {alt && alt !== src && <span className="image-caption" style={captionStyle}>{alt}</span>}
+      </span>
+    );
+  }
+
+  const absolutePath = resolvedPaths.get(src);
+  const resolvedSrc = absolutePath ? transformUrl(absolutePath) : "";
+  const isNotFound = !isLoading && !absolutePath;
 
   return (
-    <span
-      className="image-wrapper"
-      style={{ display: "block", textAlign: "center", margin: "1.5rem 0" }}
-    >
+    <span className="image-wrapper" style={wrapperStyle}>
       {resolvedSrc ? (
-        <img
-          src={resolvedSrc}
-          alt={alt}
-          style={{
-            maxWidth: "100%",
-            borderRadius: "8px",
-            boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
-          }}
-          onError={() => setError(true)}
-        />
+        <>
+          <img
+            src={resolvedSrc}
+            alt={alt}
+            style={imgStyle}
+          />
+          {alt && alt !== src && (
+            <span className="image-caption" style={captionStyle}>
+              {alt}
+            </span>
+          )}
+        </>
       ) : (
-        <span
-          style={{ color: "#888", fontStyle: "italic", fontSize: "0.9rem" }}
-        >
-          {error ? `Not found: ${src}` : `Searching: ${src}...`}
-        </span>
-      )}
-      {alt && alt !== src && !error && (
-        <span
-          className="image-caption"
-          style={{
-            display: "block",
-            fontSize: "0.8rem",
-            marginTop: "8px",
-            color: "#666",
-          }}
-        >
-          {alt}
+        <span style={{ color: "#888", fontStyle: "italic", fontSize: "0.9rem" }}>
+          {isNotFound ? `Not found: ${src}` : `Searching: ${src}...`}
         </span>
       )}
     </span>
   );
+});
+
+const wrapperStyle: React.CSSProperties = {
+  display: "block",
+  textAlign: "center",
+  margin: "1.5rem 0"
+};
+
+const imgStyle: React.CSSProperties = {
+  maxWidth: "100%",
+  borderRadius: "8px",
+  boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
+};
+
+const captionStyle: React.CSSProperties = {
+  display: "block",
+  fontSize: "0.8rem",
+  marginTop: "8px",
+  color: "#666",
 };

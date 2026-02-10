@@ -6,8 +6,8 @@
     left: 0;
     width: 48px;
     height: 100vh;
-    background: #333333;
-    border-right: 1px solid #252526;
+    background: var(--bg-activitybar);
+    border-right: 1px solid var(--border-sidebar);
     display: flex;
     flex-direction: column;
     justify-content: space-between;

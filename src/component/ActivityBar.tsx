@@ -8,7 +8,9 @@ import {
   PreviewIcon, 
   EditIcon, 
   SplitIcon, 
-  SaveIcon 
+  SaveIcon,
+  SunIcon,
+  MoonIcon
 } from "./Icons";
 
 interface ActivityBarProps {
@@ -18,6 +20,8 @@ interface ActivityBarProps {
   onViewModeChange?: (mode: ViewMode) => void;
   hasUnsavedChanges?: boolean;
   onSave?: () => void;
+  theme: "light" | "dark";
+  onThemeToggle: () => void;
 }
 
 interface ActivityItem {
@@ -40,6 +44,8 @@ export const ActivityBar = ({
   onViewModeChange,
   hasUnsavedChanges,
   onSave,
+  theme,
+  onThemeToggle,
 }: ActivityBarProps) => {
   const handleClick = (panelId: PanelType) => {
     if (activePanel === panelId) {
@@ -113,6 +119,15 @@ export const ActivityBar = ({
             <div className="unsaved-dot" />
           </button>
         )}
+
+        <button
+          className="activity-bar-item theme-toggle"
+          onClick={onThemeToggle}
+          title={`Switch to ${theme === "light" ? "dark" : "light"} mode`}
+          aria-label="Toggle Theme"
+        >
+          {theme === "light" ? <MoonIcon /> : <SunIcon />}
+        </button>
         
         <button
           className={`activity-bar-item ${activePanel === "settings" ? "active" : ""}`}

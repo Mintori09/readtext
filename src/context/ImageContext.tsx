@@ -1,14 +1,23 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
-import { invoke } from "@tauri-apps/api/core";
+import { invoke, convertFileSrc } from "@tauri-apps/api/core";
+
+export const transformAssetUrl = (path: string) => {
+  return convertFileSrc(path)
+    .replace(/ /g, "%20")
+    .replace(/\[/g, "%5B")
+    .replace(/\]/g, "%5D");
+};
 
 interface ImageContextType {
   resolvedPaths: Map<string, string | null>;
   isLoading: boolean;
+  transformUrl: (path: string) => string;
 }
 
 const ImageContext = createContext<ImageContextType>({
   resolvedPaths: new Map(),
   isLoading: false,
+  transformUrl: (p) => p,
 });
 
 export const useImageContext = () => useContext(ImageContext);
@@ -19,7 +28,6 @@ interface ImageProviderProps {
   currentPath: string | null;
 }
 
-// FIX #2: Batch image resolution - extract all image sources and resolve in one IPC call
 export const ImageProvider = ({ children, htmlContent, currentPath }: ImageProviderProps) => {
   const [resolvedPaths, setResolvedPaths] = useState<Map<string, string | null>>(new Map());
   const [isLoading, setIsLoading] = useState(false);
@@ -38,7 +46,6 @@ export const ImageProvider = ({ children, htmlContent, currentPath }: ImageProvi
 
       while ((match = imgRegex.exec(htmlContent)) !== null) {
         const src = match[1];
-        // Skip http URLs
         if (!src.startsWith("http")) {
           imageNames.push(src);
         }
@@ -51,7 +58,6 @@ export const ImageProvider = ({ children, htmlContent, currentPath }: ImageProvi
 
       setIsLoading(true);
       try {
-        // Single batch IPC call instead of N calls
         const result = await invoke<Record<string, string | null>>(
           "resolve_image_paths_batch",
           {
@@ -73,7 +79,7 @@ export const ImageProvider = ({ children, htmlContent, currentPath }: ImageProvi
   }, [htmlContent, currentPath]);
 
   return (
-    <ImageContext.Provider value={{ resolvedPaths, isLoading }}>
+    <ImageContext.Provider value={{ resolvedPaths, isLoading, transformUrl: transformAssetUrl }}>
       {children}
     </ImageContext.Provider>
   );
