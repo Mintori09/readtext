@@ -65,7 +65,7 @@ export const ImageComponent = ({
         <span
           style={{ color: "#888", fontStyle: "italic", fontSize: "0.9rem" }}
         >
-          {error ? `Không tìm thấy: ${src}` : `Đang tìm: ${src}...`}
+          {error ? `Not found: ${src}` : `Searching: ${src}...`}
         </span>
       )}
       {alt && alt !== src && !error && (
