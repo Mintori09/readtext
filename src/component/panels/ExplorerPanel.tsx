@@ -286,21 +286,5 @@ export const ExplorerPanel = memo(({ currentPath, rootPath, onFileOpen }: Explor
   );
 });
 
-// Memoized Icons
-const ChevronRightIcon = memo(() => (
-  <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-    <path d="M5.7 13.7L5 13l5-5-5-5 .7-.7 5.7 5.7-5.7 5.7z" />
-  </svg>
-));
+import { ChevronRightIcon, ChevronDownIcon, FileIcon } from "../Icons";
 
-const ChevronDownIcon = memo(() => (
-  <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-    <path d="M2.7 5.7L3.4 5l4.6 4.6L12.6 5l.7.7-5.3 5.3-5.3-5.3z" />
-  </svg>
-));
-
-const FileIcon = memo(() => (
-  <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-    <path d="M13.85 4.44l-3.28-3.3-.35-.14H2.5l-.5.5v13l.5.5h11l.5-.5V4.8l-.15-.36zM13 14H3V2h6v3.5l.5.5H13v8z" />
-  </svg>
-));
