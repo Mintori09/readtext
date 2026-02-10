@@ -15,8 +15,8 @@ use std::fs;
 use std::path::Path;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, LazyLock, Mutex};
-use std::time::{Duration, Instant};
-use tauri::{Emitter, Listener, Manager, Window};
+use std::time::Duration;
+use tauri::{Emitter, Manager, Window};
 use tauri_plugin_cli::CliExt;
 
 // Global state to control file watcher lifecycle (fix memory leak)
@@ -245,40 +245,6 @@ fn open_new_file(app: tauri::AppHandle, path: String) -> Result<(), String> {
         // Only create new window if no main window exists and instance mode is disabled
         return Err("No window available".to_string());
     }
-
-    Ok(())
-}
-
-fn create_new_window(app: &tauri::AppHandle, file_path: &str) -> Result<(), String> {
-    use std::time::{SystemTime, UNIX_EPOCH};
-    use tauri::{WebviewUrl, WebviewWindowBuilder};
-
-    let timestamp = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .unwrap()
-        .as_millis();
-    let label = format!("window_{}", timestamp);
-
-    let file_name = Path::new(file_path)
-        .file_name()
-        .and_then(|n| n.to_str())
-        .unwrap_or("ReadText");
-
-    let window = WebviewWindowBuilder::new(app, label, WebviewUrl::App("index.html".into()))
-        .title(file_name)
-        .inner_size(800.0, 600.0)
-        .min_inner_size(600.0, 800.0)
-        .decorations(false)
-        .transparent(true)
-        .build()
-        .map_err(|e| e.to_string())?;
-
-    // Clone the file path to be loaded by the new window
-    let path_clone = file_path.to_string();
-    let window_clone = window.clone();
-    window.once("window-ready", move |_| {
-        let _ = window_clone.emit("load-file", path_clone);
-    });
 
     Ok(())
 }
