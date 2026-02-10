@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { open } from "@tauri-apps/plugin-dialog";
+import "./styles/theme.css";
 import "./styles/markdown.css";
 import "./styles/print.css";
 
