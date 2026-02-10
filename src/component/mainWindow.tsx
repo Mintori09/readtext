@@ -1,14 +1,14 @@
 import { Sidebar } from "./sidebar";
-import { ActivityBar, PanelType } from "./ActivityBar";
+import { ActivityBar } from "./ActivityBar";
+import { PanelType, ViewMode } from "../types";
 import { MarkdownRenderer } from "./markdownRender";
 import { MarkdownEditor, MarkdownEditorHandle } from "./MarkdownEditor";
-import { useTheme } from "../hook/useTheme";
+import { useTheme } from "../hooks/useTheme";
 import { useEffect, useRef, useState, useCallback } from "react";
-import { useZoom } from "../hook/useZoom";
-import { useVim } from "../hook/useVim";
+import { useZoom } from "../hooks/useZoom";
+import { useVim } from "../hooks/useVim";
 import { invoke } from "@tauri-apps/api/core";
 
-export type ViewMode = "preview" | "edit" | "split";
 
 export const MainWindow = ({
   content,

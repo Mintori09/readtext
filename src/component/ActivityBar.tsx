@@ -1,7 +1,5 @@
 import "../styles/activitybar.css";
-import { ViewMode } from "./mainWindow";
-
-export type PanelType = "explorer" | "outline" | "search" | "settings" | null;
+import { ViewMode, PanelType } from "../types";
 
 interface ActivityBarProps {
   activePanel: PanelType;

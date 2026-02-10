@@ -5,7 +5,7 @@ import { markdown } from "@codemirror/lang-markdown";
 import { defaultKeymap, history, historyKeymap } from "@codemirror/commands";
 import { oneDark } from "@codemirror/theme-one-dark";
 import { syntaxHighlighting, defaultHighlightStyle } from "@codemirror/language";
-import { ViewMode } from "./mainWindow";
+import { ViewMode } from "../types";
 
 export interface MarkdownEditorHandle {
   scrollToPercent: (percent: number) => void;
@@ -161,7 +161,7 @@ export const MarkdownEditor = memo(forwardRef<MarkdownEditorHandle, MarkdownEdit
       }),
       EditorView.lineWrapping,
       EditorView.domEventHandlers({
-        scroll: (event, view) => {
+        scroll: (_event, view) => {
           if (onScroll) {
             const { scrollTop, scrollHeight, clientHeight } = view.scrollDOM;
             const percent = (scrollTop / (scrollHeight - clientHeight)) * 100;

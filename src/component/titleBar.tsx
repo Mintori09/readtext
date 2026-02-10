@@ -1,13 +1,8 @@
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import "../styles/titleBar.css";
+import { Tab } from "../types";
 
 const appWindow = getCurrentWindow();
-
-export interface Tab {
-  id: string;
-  path: string;
-  fileName: string;
-}
 
 type Props = {
   titleBar: String | null;

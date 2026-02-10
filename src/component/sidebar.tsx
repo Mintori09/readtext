@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef, RefObject, memo, useCallback } from "react";
 import { invoke } from "@tauri-apps/api/core";
-import { PanelType } from "./ActivityBar";
+import { PanelType } from "../types";
 import { ExplorerPanel } from "./panels/ExplorerPanel";
 import { SearchPanel } from "./panels/SearchPanel";
 import "../styles/sidebar.css";
