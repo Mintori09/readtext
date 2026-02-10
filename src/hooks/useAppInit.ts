@@ -39,7 +39,7 @@ export function useAppInit({ fileSystem, tabs, setDefaultActivePanel }: UseAppIn
         if (newTabs.length === 0) {
             fileSystem.setContent(NO_FILES_OPEN);
             fileSystem.setCurrentPath(null);
-        } // activeTab update is handled in useTabs or needs coordination
+        }
     };
 
     useEffect(() => {
@@ -47,18 +47,34 @@ export function useAppInit({ fileSystem, tabs, setDefaultActivePanel }: UseAppIn
 
         const init = async () => {
             try {
-                // Rebuild index and get CLI file in parallel
-                const [cliPath] = await Promise.all([
-                    invoke<string | null>(TAURI_COMMANDS.GET_CLI_FILE),
-                    invoke(TAURI_COMMANDS.REBUILD_INDEX).catch((e) =>
-                        console.error("Indexing error:", e),
-                    ),
-                ]);
+                const cliPath = await invoke<string | null>(TAURI_COMMANDS.GET_CLI_FILE);
+
+                // Rebuild index in background
+                invoke(TAURI_COMMANDS.REBUILD_INDEX).catch((e) =>
+                    console.error("Indexing error:", e)
+                );
 
                 setIsIndexing(false);
 
                 if (!cliPath) {
-                    await invoke(TAURI_COMMANDS.CLOSE_APP);
+                    // No CLI path provided - prompt for a folder
+                    const { open } = await import("@tauri-apps/plugin-dialog");
+                    const selected = await open({
+                        directory: true,
+                        multiple: false,
+                        title: "Select Workspace Folder"
+                    });
+
+                    if (selected && typeof selected === "string") {
+                        fileSystem.setCurrentFolder(selected);
+                        setDefaultActivePanel("explorer");
+                        fileSystem.setContent(SELECT_FILE_MSG);
+                    } else {
+                        // User cancelled folder selection
+                        fileSystem.setContent(NO_FILES_OPEN);
+                    }
+
+                    await invoke(TAURI_COMMANDS.SHOW_WINDOW);
                     return;
                 }
 
@@ -110,7 +126,13 @@ export function useAppInit({ fileSystem, tabs, setDefaultActivePanel }: UseAppIn
                     return;
                 }
 
-                // It is a file
+                // It is a file - derive parent folder
+                const parentDir = cliPath.substring(0, cliPath.lastIndexOf("/"));
+                if (parentDir) {
+                    fileSystem.setCurrentFolder(parentDir);
+                    setDefaultActivePanel("explorer");
+                }
+
                 const tabId = crypto.randomUUID();
                 const fileName = cliPath.split("/").pop() || cliPath;
 
@@ -134,9 +156,6 @@ export function useAppInit({ fileSystem, tabs, setDefaultActivePanel }: UseAppIn
                     if (isInstance) {
                         const existingTab = currentTabs.find((t) => t.path === newPath);
                         if (existingTab) {
-                            // We need to trigger tab change. 
-                            // Since this is inside an event listener, we need access to the latest handleTabChange logic.
-                            // Or simply state updates.
                             tabs.setActiveTabId(existingTab.id);
                             fileSystem.setCurrentPath(existingTab.path);
                             const data = await fileSystem.readFile(existingTab.path);
@@ -175,7 +194,6 @@ export function useAppInit({ fileSystem, tabs, setDefaultActivePanel }: UseAppIn
                         }
                     }
                 });
-
             } catch (e) {
                 console.error("Initialization error:", e);
             } finally {
