@@ -1,0 +1,5 @@
+.markdown-editor-container {
+    height: 100%;
+    background-color: var(--bg-color);
+    overflow: hidden;
+}

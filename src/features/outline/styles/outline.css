@@ -1,0 +1,7 @@
+.outline-progress-fill {
+    width: var(--progress);
+}
+
+.outline-scroll-area {
+    overflow-y: auto;
+}

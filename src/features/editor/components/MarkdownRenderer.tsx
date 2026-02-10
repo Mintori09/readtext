@@ -2,11 +2,7 @@ import { useEffect, useState, useRef, memo } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import Prism from "prismjs";
 import { ImageProvider, useImageContext } from "../../../context/ImageContext";
-
-interface MarkdownRendererProps {
-  content: string;
-  currentPath: string | null;
-}
+import { MarkdownRendererProps } from "../types";
 
 // FIX #6: Memoize to prevent unnecessary re-renders
 export const MarkdownRenderer = memo(

@@ -1,5 +1,6 @@
 import { Sidebar } from "./Sidebar";
 import { ActivityBar } from "./ActivityBar";
+import "../styles/layout.css";
 import { PanelType, ViewMode } from "../../../types";
 import { MarkdownRenderer, MarkdownEditor, MarkdownEditorHandle, useZoom, useVim } from "../../editor";
 import { useTheme, useConfig } from "../../settings";
@@ -270,15 +271,10 @@ export const MainWindow = ({
         )}
 
         {showPreview && (
-          <main
+            <main
             ref={scrollRef}
-            className="content-area scrollable-content preview-pane"
+            className="content-area scrollable-content preview-pane main-preview-pane"
             onScroll={handleScroll}
-            style={{
-              height: "100%", // FIX: Fill flex parent
-              overflowY: "auto",
-              position: "relative",
-            }}
           >
             <div id="content" className="markdown-container">
               <MarkdownRenderer content={editContent} currentPath={currentPath} />

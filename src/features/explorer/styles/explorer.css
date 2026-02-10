@@ -1,0 +1,3 @@
+.explorer-item-btn {
+    padding-left: calc(12px + var(--depth) * 16px);
+}

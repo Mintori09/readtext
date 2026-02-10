@@ -191,16 +191,16 @@ fn start_watch(window: Window, path: String) {
 #[tauri::command]
 async fn read_file(path: String) -> Result<String, String> {
     let p = std::path::PathBuf::from(&path);
-    
+
     // Use tokio async file I/O to avoid blocking the thread pool
     let metadata = tokio::fs::metadata(&p)
         .await
         .map_err(|_| format!("Lỗi: File '{}' không tồn tại.", path))?;
-    
+
     if !metadata.is_file() {
         return Err(format!("Lỗi: '{}' là thư mục, không phải file.", path));
     }
-    
+
     tokio::fs::read_to_string(&p)
         .await
         .map_err(|e| format!("Không thể đọc file: {}", e))
@@ -290,7 +290,6 @@ fn show_window(window: tauri::Window) {
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    let start_app = Instant::now();
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())

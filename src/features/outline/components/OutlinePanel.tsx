@@ -1,6 +1,7 @@
 import { useEffect, useState, useRef, memo } from "react";
 import { HeadingData } from "../../../types";
 import "../../../styles/panels.css";
+import "../styles/outline.css";
 
 interface OutlinePanelProps {
   headings: HeadingData[];
@@ -147,7 +148,7 @@ export const OutlinePanel = memo(({
       <div className="outline-progress-bar">
         <div 
           className="outline-progress-fill" 
-          style={{ width: `${readProgress}%` }} 
+          style={{ "--progress": `${readProgress}%` } as React.CSSProperties}
         />
       </div>
 
@@ -156,7 +157,7 @@ export const OutlinePanel = memo(({
       ) : visibleHeadings.length === 0 ? (
         <div className="panel-empty">All headings hidden</div>
       ) : (
-        <div className="panel-scroll-area" ref={scrollContainerRef} style={{ overflowY: "auto" }}>
+        <div className="panel-scroll-area outline-scroll-area" ref={scrollContainerRef}>
           <ul role="list">
             {visibleHeadings.map((heading, index) => {
               const isActive = activeHeadingId === heading.id;

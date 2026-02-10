@@ -6,6 +6,7 @@ import { defaultKeymap, history, historyKeymap } from "@codemirror/commands";
 import { oneDark } from "@codemirror/theme-one-dark";
 import { syntaxHighlighting, defaultHighlightStyle } from "@codemirror/language";
 import { ViewMode } from "../../../types";
+import "../styles/editor.css";
 
 export interface MarkdownEditorHandle {
   scrollToPercent: (percent: number) => void;
@@ -226,13 +227,7 @@ export const MarkdownEditor = memo(forwardRef<MarkdownEditorHandle, MarkdownEdit
   return (
     <div 
       ref={containerRef} 
-      className="markdown-editor"
-      style={{
-        height: "100%",
-        // Background color logic moved to CodeMirror themes, but we set a default here to avoid flashes
-        backgroundColor: "var(--bg-color)", 
-        overflow: "hidden",
-      }}
+      className="markdown-editor markdown-editor-container"
     />
   );
 }));

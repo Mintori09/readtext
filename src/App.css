@@ -71,7 +71,9 @@ button {
     font-family: inherit;
     color: var(--text-main);
     background-color: var(--bg-sidebar);
-    transition: border-color 0.25s, background-color 0.25s;
+    transition:
+        border-color 0.25s,
+        background-color 0.25s;
     box-shadow: 0 2px 2px rgba(0, 0, 0, 0.1);
 }
 

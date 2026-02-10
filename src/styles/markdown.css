@@ -10,21 +10,16 @@ html {
 }
 
 body {
-    background-color: var(--bg-color);
+    background-color: var(--bg-color) !important;
     color: var(--text-main);
     margin: 0;
     line-height: 1.6;
     text-rendering: optimizeLegibility;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
-    font-feature-settings: "kern" 1, "liga" 1;
-}
-
-span,
-p,
-div {
-    transform: translateZ(0);
-    backface-visibility: hidden;
+    font-feature-settings:
+        "kern" 1,
+        "liga" 1;
 }
 
 .app-layout {
@@ -62,6 +57,8 @@ div {
     font-weight: 400;
     font-size: 1.0625rem;
     letter-spacing: -0.003em;
+    background-color: var(--bg-color) !important;
+    color: var(--text-main);
 }
 
 .editor-pane {
@@ -185,7 +182,7 @@ div {
 }
 
 /* Inline Code */
-.markdown-container :not(pre)>code {
+.markdown-container :not(pre) > code {
     background-color: var(--inline-code-bg);
     color: var(--inline-code-color);
     padding: 0.15rem 0.4rem;
@@ -235,7 +232,7 @@ div {
 }
 
 .token.namespace {
-    opacity: .7;
+    opacity: 0.7;
 }
 
 .token.property,
@@ -317,27 +314,27 @@ div {
     border-spacing: 0;
     margin: 2rem 0;
     font-size: 0.9375rem;
-    background-color: var(--bg-sidebar-content);
-    border: 0.5px solid var(--border-subtle);
+    background-color: var(--table-bg) !important;
+    border: 0.5px solid var(--table-border);
     border-radius: 10px;
     overflow: hidden;
     box-shadow: var(--shadow-sm);
 }
 
 .markdown-container th {
-    background-color: var(--bg-table-stripe);
-    color: var(--text-main);
+    background-color: var(--table-header-bg) !important;
+    color: var(--text-main) !important;
     font-weight: 600;
     text-align: left;
     padding: 0.875rem 1rem;
-    border-bottom: 0.5px solid var(--border-subtle);
+    border-bottom: 0.5px solid var(--table-border) !important;
     font-size: 0.875rem;
     letter-spacing: -0.01em;
 }
 
 .markdown-container td {
     padding: 0.875rem 1rem;
-    border-bottom: 0.5px solid var(--border-subtle);
+    border-bottom: 0.5px solid var(--table-border);
     color: var(--text-main);
 }
 
@@ -346,11 +343,11 @@ div {
 }
 
 .markdown-container tbody tr:nth-child(even) {
-    background-color: var(--bg-table-stripe);
+    background-color: var(--table-stripe-bg);
 }
 
 .markdown-container tbody tr:hover {
-    background-color: var(--bg-table-hover);
+    background-color: var(--table-hover-bg);
     transition: background-color 0.15s ease;
 }
 
@@ -477,7 +474,9 @@ div {
     font-size: 1.5rem;
     letter-spacing: -0.03em;
     color: var(--text-main);
-    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, sans-serif;
+    font-family:
+        -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto,
+        sans-serif;
     text-transform: none;
 }
 
@@ -485,10 +484,12 @@ div {
     margin-top: 0.5rem;
     font-size: 0.75rem;
     font-weight: 500;
-    color: var(--text-panel-muted);
+    color: var(--text-panel-muted) !important;
     text-transform: uppercase;
     letter-spacing: 0.05em;
-    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif;
+    font-family:
+        -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto,
+        sans-serif;
 }
 
 /* TOC Scroll Area */
@@ -498,7 +499,7 @@ div {
     padding: 1.5rem 1rem;
     scroll-behavior: smooth;
     scrollbar-width: thin;
-    scrollbar-color: var(--text-panel-muted) transparent;
+    scrollbar-color: var(--text-panel-muted) transparent !important;
 }
 
 .toc-scroll-area::-webkit-scrollbar {
@@ -510,7 +511,7 @@ div {
 }
 
 .toc-scroll-area::-webkit-scrollbar-thumb {
-    background: var(--text-panel-muted);
+    background: var(--text-panel-muted) !important;
     border-radius: 3px;
     transition: background 0.2s ease;
 }
@@ -539,7 +540,7 @@ div {
     width: 100%;
     padding: 10px 14px;
     font-size: 0.9rem;
-    color: var(--text-panel-subtitle);
+    color: var(--text-panel-subtitle) !important;
     background: transparent;
     border: none;
     border-radius: 8px;
@@ -547,14 +548,16 @@ div {
     user-select: none;
     line-height: 1.5;
     font-weight: 500;
-    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif;
+    font-family:
+        -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto,
+        sans-serif;
     text-align: left;
     position: relative;
     overflow: hidden;
 }
 
 .toc-link::before {
-    content: '';
+    content: "";
     position: absolute;
     left: 0;
     top: 0;
@@ -597,7 +600,7 @@ div {
 
 /* Active State */
 .toc-item.active .toc-link {
-    background: var(--bg-item-active);
+    background: var(--bg-item-active) !important;
     color: var(--accent);
     font-weight: 600;
 }
@@ -666,7 +669,7 @@ div {
 .toc-overlay {
     position: fixed;
     inset: 0;
-    background: var(--bg-item-active);
+    background: var(--bg-item-active) !important;
     backdrop-filter: blur(8px);
     -webkit-backdrop-filter: blur(8px);
     z-index: 1400;
@@ -685,7 +688,7 @@ div {
 
 /* Selection */
 ::selection {
-    background-color: var(--bg-item-active);
+    background-color: var(--bg-item-active) !important;
     color: inherit;
 }
 
@@ -700,7 +703,7 @@ div {
 }
 
 ::-webkit-scrollbar-thumb {
-    background: var(--text-panel-muted);
+    background: var(--text-panel-muted) !important;
     border-radius: 5px;
     border: 2px solid transparent;
     background-clip: padding-box;
@@ -713,7 +716,6 @@ div {
 
 /* Print Styles */
 @media print {
-
     .toc-sidebar,
     .toc-toggle,
     .toc-overlay,
@@ -804,4 +806,9 @@ div {
         font-size: 0.8rem;
         margin-bottom: -0.25rem;
     }
+}
+
+.prose-wrapper table tr {
+    background-color: transparent !important;
+    border-bottom: 1px solid #ddd;
 }

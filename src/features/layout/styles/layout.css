@@ -1,0 +1,7 @@
+.main-preview-pane {
+    height: 100%;
+    overflow-y: auto;
+    position: relative;
+    background-color: var(--bg-color);
+    color: var(--text-main);
+}

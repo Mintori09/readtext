@@ -1,6 +1,7 @@
 import { useState, useEffect, memo, useCallback, useRef } from "react";
 import { readDir, DirEntry, rename } from "@tauri-apps/plugin-fs";
 import { open } from "@tauri-apps/plugin-dialog";
+import "../styles/explorer.css";
 
 interface FileNode {
   name: string;
@@ -212,8 +213,8 @@ export const ExplorerPanel = memo(({ currentPath, rootPath, onFileOpen }: Explor
     return nodes.map((node) => (
       <div key={node.path}>
         <button
-          className={`explorer-item ${currentPath === node.path ? "active" : ""}`}
-          style={{ paddingLeft: `${12 + depth * 16}px` }}
+          className={`explorer-item explorer-item-btn ${currentPath === node.path ? "active" : ""}`}
+          style={{ "--depth": depth } as React.CSSProperties}
           onClick={() => handleFileClick(node)}
           onContextMenu={(e) => startRenaming(node, e)}
         >

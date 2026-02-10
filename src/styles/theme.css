@@ -1,6 +1,10 @@
 :root {
-    --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-    --font-mono: "SF Mono", "JetBrainsMono Nerd Font", "Fira Code", Menlo, Monaco, "Courier New", monospace;
+    --font-sans:
+        -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto,
+        "Helvetica Neue", Arial, sans-serif;
+    --font-mono:
+        "SF Mono", "JetBrainsMono Nerd Font", "Fira Code", Menlo, Monaco,
+        "Courier New", monospace;
 
     /* Core Colors - Light */
     --bg-color: #ffffff;
@@ -30,7 +34,7 @@
     /* Component Colors - Light */
     --bg-sidebar: #f3f3f3;
     --bg-sidebar-content: #ffffff;
-    --bg-activitybar: #2c2c2c;
+    --bg-activitybar: #ffffff;
     --bg-titlebar: #f3f3f3;
     --bg-panel-header: #e8e8e8;
     --bg-item-hover: rgba(0, 0, 0, 0.05);
@@ -44,8 +48,11 @@
     --inline-code-color: #d12953;
     --link-color: #007aff;
     --blockquote-bg: #f9f9fb;
-    --bg-table-stripe: #fafafa;
-    --bg-table-hover: #f5f5f7;
+    --table-bg: #ffffff;
+    --table-header-bg: #f3f3f3;
+    --table-border: #e5e5ea;
+    --table-stripe-bg: #fafafa;
+    --table-hover-bg: #f5f5f7;
     --indicator-dot: #858585;
 
     /* Shadows */
@@ -54,7 +61,7 @@
     --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.08);
 }
 
-[data-theme="dark"] {
+:root[data-theme="dark"] {
     /* Core Colors - Dark */
     --bg-color: #1e1e1e;
     --text-main: #e1e1e6;
@@ -94,8 +101,11 @@
     --inline-code-bg: #2d2d2d;
     --inline-code-color: #ef4444;
     --blockquote-bg: #27272a;
-    --bg-table-stripe: #252526;
-    --bg-table-hover: #2d2d30;
+    --table-bg: #1e1e1e;
+    --table-header-bg: #252526;
+    --table-border: #3e3e42;
+    --table-stripe-bg: #262626;
+    --table-hover-bg: #2d2d2d;
     --indicator-dot: #4e4e4e;
 
     /* Shadows */
