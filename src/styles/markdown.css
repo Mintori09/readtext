@@ -50,7 +50,7 @@ body {
 .markdown-container {
     flex: 1;
     width: 100%;
-    max-width: var(--max-width-view);
+    max-width: var(--max-width);
     margin: 0 auto;
     padding: 5rem 2rem 4rem 2rem;
     font-family: var(--font-sans);
