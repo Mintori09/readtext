@@ -7,6 +7,8 @@
         "Courier New", monospace;
 
     /* Core Colors - Light */
+    --font-size: 16px;
+    --max-width: 800px;
     --bg-color: #ffffff;
     --text-main: #1d1d1f;
     --text-secondary: #86868b;

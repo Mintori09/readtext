@@ -1,10 +1,26 @@
-import { useEffect, useRef, memo, forwardRef, useImperativeHandle, useMemo } from "react";
-import { EditorView, keymap, lineNumbers, highlightActiveLine, highlightActiveLineGutter } from "@codemirror/view";
+import {
+  useEffect,
+  useRef,
+  memo,
+  forwardRef,
+  useImperativeHandle,
+  useMemo,
+} from "react";
+import {
+  EditorView,
+  keymap,
+  lineNumbers,
+  highlightActiveLine,
+  highlightActiveLineGutter,
+} from "@codemirror/view";
 import { EditorState, Extension, Compartment } from "@codemirror/state";
 import { markdown } from "@codemirror/lang-markdown";
 import { defaultKeymap, history, historyKeymap } from "@codemirror/commands";
 import { oneDark } from "@codemirror/theme-one-dark";
-import { syntaxHighlighting, defaultHighlightStyle } from "@codemirror/language";
+import {
+  syntaxHighlighting,
+  defaultHighlightStyle,
+} from "@codemirror/language";
 import { ViewMode } from "../../../types";
 import "../styles/editor.css";
 
@@ -95,139 +111,146 @@ const lightTheme = EditorView.theme({
   },
 });
 
-export const MarkdownEditor = memo(forwardRef<MarkdownEditorHandle, MarkdownEditorProps>(({ 
-  content, 
-  onChange, 
-  onSave,
-  viewMode,
-  onScroll,
-  theme = "dark"
-}, ref) => {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const viewRef = useRef<EditorView | null>(null);
-  const isExternalUpdate = useRef(false);
-  const themeCompartment = useRef(new Compartment());
+export const MarkdownEditor = memo(
+  forwardRef<MarkdownEditorHandle, MarkdownEditorProps>(
+    (
+      { content, onChange, onSave, viewMode, onScroll, theme = "dark" },
+      ref,
+    ) => {
+      const containerRef = useRef<HTMLDivElement>(null);
+      const viewRef = useRef<EditorView | null>(null);
+      const isExternalUpdate = useRef(false);
+      const themeCompartment = useRef(new Compartment());
 
-  useImperativeHandle(ref, () => ({
-    scrollToPercent: (percent: number) => {
-      if (!viewRef.current) return;
-      const scrollHeight = viewRef.current.scrollDOM.scrollHeight;
-      const clientHeight = viewRef.current.scrollDOM.clientHeight;
-      const scrollTop = (scrollHeight - clientHeight) * (percent / 100);
-      
-      viewRef.current.scrollDOM.scrollTo({ top: scrollTop });
-    },
-    getScrollPercent: () => {
-      if (!viewRef.current) return 0;
-      const { scrollTop, scrollHeight, clientHeight } = viewRef.current.scrollDOM;
-      return (scrollTop / (scrollHeight - clientHeight)) * 100;
-    }
-  }));
+      useImperativeHandle(ref, () => ({
+        scrollToPercent: (percent: number) => {
+          if (!viewRef.current) return;
+          const scrollHeight = viewRef.current.scrollDOM.scrollHeight;
+          const clientHeight = viewRef.current.scrollDOM.clientHeight;
+          const scrollTop = (scrollHeight - clientHeight) * (percent / 100);
 
-  // Handle save shortcut
-  const saveKeymap = useMemo(() => keymap.of([
-    {
-      key: "Mod-s",
-      run: () => {
-        onSave?.();
-        return true;
-      },
-      preventDefault: true,
-    },
-  ]), [onSave]);
+          viewRef.current.scrollDOM.scrollTo({ top: scrollTop });
+        },
+        getScrollPercent: () => {
+          if (!viewRef.current) return 0;
+          const { scrollTop, scrollHeight, clientHeight } =
+            viewRef.current.scrollDOM;
+          return (scrollTop / (scrollHeight - clientHeight)) * 100;
+        },
+      }));
 
-  // Create editor on mount
-  useEffect(() => {
-    if (!containerRef.current) return;
+      // Handle save shortcut
+      const saveKeymap = useMemo(
+        () =>
+          keymap.of([
+            {
+              key: "Mod-s",
+              run: () => {
+                onSave?.();
+                return true;
+              },
+              preventDefault: true,
+            },
+          ]),
+        [onSave],
+      );
 
-    // Determine initial theme
-    const isLightMode = theme === "light";
-    const initialThemeExtensions = isLightMode 
-      ? [lightTheme] 
-      : [oneDark, darkTheme];
+      // Create editor on mount
+      useEffect(() => {
+        if (!containerRef.current) return;
 
-    const extensions: Extension[] = [
-      lineNumbers(),
-      highlightActiveLine(),
-      highlightActiveLineGutter(),
-      history(),
-      markdown(),
-      syntaxHighlighting(defaultHighlightStyle),
-      layoutTheme,
-      themeCompartment.current.of(initialThemeExtensions),
-      keymap.of([...defaultKeymap, ...historyKeymap]),
-      saveKeymap,
-      EditorView.updateListener.of((update) => {
-        if (update.docChanged && !isExternalUpdate.current) {
-          onChange(update.state.doc.toString());
+        // Determine initial theme
+        const isLightMode = theme === "light";
+        const initialThemeExtensions = isLightMode
+          ? [lightTheme]
+          : [oneDark, darkTheme];
+
+        const extensions: Extension[] = [
+          lineNumbers(),
+          highlightActiveLine(),
+          highlightActiveLineGutter(),
+          history(),
+          markdown(),
+          syntaxHighlighting(defaultHighlightStyle),
+          layoutTheme,
+          themeCompartment.current.of(initialThemeExtensions),
+          keymap.of([...defaultKeymap, ...historyKeymap]),
+          saveKeymap,
+          EditorView.updateListener.of((update) => {
+            if (update.docChanged && !isExternalUpdate.current) {
+              onChange(update.state.doc.toString());
+            }
+          }),
+          EditorView.lineWrapping,
+          EditorView.domEventHandlers({
+            scroll: (_event, view) => {
+              if (onScroll) {
+                const { scrollTop, scrollHeight, clientHeight } =
+                  view.scrollDOM;
+                const percent =
+                  (scrollTop / (scrollHeight - clientHeight)) * 100;
+                onScroll(percent);
+              }
+            },
+          }),
+        ];
+
+        const state = EditorState.create({
+          doc: content,
+          extensions,
+        });
+
+        const view = new EditorView({
+          state,
+          parent: containerRef.current,
+        });
+
+        viewRef.current = view;
+
+        return () => {
+          view.destroy();
+          viewRef.current = null;
+        };
+      }, []); // Only run on mount
+
+      // Dynamic Theme Switching
+      useEffect(() => {
+        if (!viewRef.current) return;
+
+        const isLightMode = theme === "light";
+        const themeExtensions = isLightMode
+          ? [lightTheme]
+          : [oneDark, darkTheme];
+
+        viewRef.current.dispatch({
+          effects: themeCompartment.current.reconfigure(themeExtensions),
+        });
+      }, [theme, viewMode]);
+
+      // Update content changes
+      useEffect(() => {
+        if (!viewRef.current) return;
+
+        const currentContent = viewRef.current.state.doc.toString();
+        if (content !== currentContent) {
+          isExternalUpdate.current = true;
+          viewRef.current.dispatch({
+            changes: {
+              from: 0,
+              to: currentContent.length,
+              insert: content,
+            },
+          });
+          isExternalUpdate.current = false;
         }
-      }),
-      EditorView.lineWrapping,
-      EditorView.domEventHandlers({
-        scroll: (_event, view) => {
-          if (onScroll) {
-            const { scrollTop, scrollHeight, clientHeight } = view.scrollDOM;
-            const percent = (scrollTop / (scrollHeight - clientHeight)) * 100;
-            onScroll(percent);
-          }
-        },
-      }),
-    ];
+      }, [content]);
 
-    const state = EditorState.create({
-      doc: content,
-      extensions,
-    });
-
-    const view = new EditorView({
-      state,
-      parent: containerRef.current,
-    });
-
-    viewRef.current = view;
-
-    return () => {
-      view.destroy();
-      viewRef.current = null;
-    };
-  }, []); // Only run on mount
-
-  // Dynamic Theme Switching
-  useEffect(() => {
-    if (!viewRef.current) return;
-
-    const isLightMode = theme === "light";
-    const themeExtensions = isLightMode 
-      ? [lightTheme]
-      : [oneDark, darkTheme];
-
-    viewRef.current.dispatch({
-      effects: themeCompartment.current.reconfigure(themeExtensions)
-    });
-  }, [theme, viewMode]);
-
-  // Update content changes
-  useEffect(() => {
-    if (!viewRef.current) return;
-    
-    const currentContent = viewRef.current.state.doc.toString();
-    if (content !== currentContent) {
-      isExternalUpdate.current = true;
-      viewRef.current.dispatch({
-        changes: {
-          from: 0,
-          to: currentContent.length,
-          insert: content,
-        },
-      });
-      isExternalUpdate.current = false;
-    }
-  }, [content]);
-
-  return (
-    <div 
-      ref={containerRef} 
-      className="markdown-editor markdown-editor-container"
-    />
-  );
-}));
+      return (
+        <div
+          ref={containerRef}
+          className="markdown-editor markdown-editor-container"
+        />
+      );
+    },
+  ),
+);

@@ -9,7 +9,7 @@ interface ImageComponentProps {
 
 export const ImageComponent = memo(({ src, alt }: ImageComponentProps) => {
   const { resolvedPaths, transformUrl, isLoading } = useImageContext();
-  
+
   if (!src) return null;
 
   // Handle external URLs immediately
@@ -17,7 +17,9 @@ export const ImageComponent = memo(({ src, alt }: ImageComponentProps) => {
     return (
       <span className="image-wrapper image-component-wrapper">
         <img src={src} alt={alt} className="image-component-img" />
-        {alt && alt !== src && <span className="image-caption image-component-caption">{alt}</span>}
+        {alt && alt !== src && (
+          <span className="image-caption image-component-caption">{alt}</span>
+        )}
       </span>
     );
   }
@@ -30,15 +32,9 @@ export const ImageComponent = memo(({ src, alt }: ImageComponentProps) => {
     <span className="image-wrapper image-component-wrapper">
       {resolvedSrc ? (
         <>
-          <img
-            src={resolvedSrc}
-            alt={alt}
-            className="image-component-img"
-          />
+          <img src={resolvedSrc} alt={alt} className="image-component-img" />
           {alt && alt !== src && (
-            <span className="image-caption image-component-caption">
-              {alt}
-            </span>
+            <span className="image-caption image-component-caption">{alt}</span>
           )}
         </>
       ) : (
@@ -49,5 +45,3 @@ export const ImageComponent = memo(({ src, alt }: ImageComponentProps) => {
     </span>
   );
 });
-
-
