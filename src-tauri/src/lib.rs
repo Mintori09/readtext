@@ -3,6 +3,7 @@ mod config;
 mod helper;
 mod image_cache;
 mod markdown_parse;
+use crate::config::set_default_env;
 use crate::helper::get_config_path;
 use crate::helper::get_path;
 use crate::image_cache::initialize_database;
@@ -256,6 +257,7 @@ fn show_window(window: tauri::Window) {
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    set_default_env();
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
