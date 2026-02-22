@@ -5,6 +5,7 @@ use std::sync::Mutex;
 use std::time::SystemTime;
 use std::{path::Path, time::Instant};
 use tauri::{AppHandle, Manager, State};
+use urlencoding::decode;
 use walkdir::WalkDir;
 
 const DATABASE_FILE_NAME: &str = "cache.db";
@@ -102,9 +103,11 @@ fn is_image_file(path: &Path) -> bool {
 }
 
 fn fetch_path_from_db(connection: &Connection, file_name: &str) -> Option<String> {
+    let decode_name = decode(file_name).unwrap_or(std::borrow::Cow::Borrowed(file_name));
+
     let sql = "SELECT full_path FROM image_index WHERE file_name = ?1 LIMIT 1";
     connection
-        .query_row(sql, params![file_name], |row| row.get(0))
+        .query_row(sql, params![decode_name.as_ref()], |row| row.get(0))
         .ok()
 }
 
@@ -213,7 +216,7 @@ pub fn resolve_image_paths_batch(
     asset_names: Vec<String>,
 ) -> HashMap<String, Option<String>> {
     let connection = state.0.lock().unwrap();
-    
+
     asset_names
         .into_iter()
         .map(|name| {
@@ -231,4 +234,3 @@ fn resolve_relative_path(current_file_path: &str, asset_name: &str) -> Option<St
         .filter(|path| path.exists())
         .map(|path| path.to_string_lossy().into_owned())
 }
-

@@ -12,7 +12,6 @@ notify() {
 trap 'notify "Build Failed" "Check terminal"; exit' ERR
 
 pnpm install
-pnpm run build
 pnpm tauri build
 
 notify "Build Success" "App ready in release bundle"
