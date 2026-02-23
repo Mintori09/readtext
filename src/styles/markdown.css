@@ -182,7 +182,7 @@ body {
 }
 
 /* Inline Code */
-.markdown-container :not(pre) > code {
+.markdown-container :not(pre)>code {
     background-color: var(--inline-code-bg);
     color: var(--inline-code-color);
     padding: 0.15rem 0.4rem;
@@ -194,11 +194,18 @@ body {
 }
 
 /* Code Blocks */
+.markdown-container pre,
+.markdown-container pre code {
+    white-space: pre-wrap !important;
+    word-break: break-all !important;
+    word-wrap: break-word !important;
+}
+
 .markdown-container pre {
     background-color: var(--code-bg) !important;
     border-radius: 10px;
     padding: 1.25rem 1.5rem;
-    overflow: auto;
+    overflow-x: auto;
     margin: 1.75rem 0;
     border: 0.5px solid var(--border-subtle);
     box-shadow: var(--shadow-sm);
@@ -716,6 +723,7 @@ body {
 
 /* Print Styles */
 @media print {
+
     .toc-sidebar,
     .toc-toggle,
     .toc-overlay,
