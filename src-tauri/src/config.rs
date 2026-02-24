@@ -10,6 +10,9 @@ pub struct Config {
 
     #[serde(default)]
     pub features: Features,
+
+    #[serde(default = "default_max_width")]
+    pub max_width: String,
 }
 
 #[derive(Deserialize, Serialize, Debug, Clone)]
@@ -39,6 +42,7 @@ impl Default for Config {
             search_paths: default_search_paths(),
             instance_mode: InstanceMode::default(),
             features: Features::default(),
+            max_width: default_max_width(),
         }
     }
 }
@@ -68,6 +72,10 @@ fn default_search_paths() -> Vec<String> {
 
 fn default_true() -> bool {
     true
+}
+
+fn default_max_width() -> String {
+    "800px".to_string()
 }
 
 pub fn set_default_env() {

@@ -20,6 +20,7 @@ export interface Config {
         auto_index: boolean;
     };
     theme: "light" | "dark";
+    max_width: string;
 }
 
 export interface HeadingData {

@@ -216,8 +216,8 @@ async fn is_dir(path: String) -> Result<bool, String> {
 }
 
 #[tauri::command]
-fn get_config(app_handle: tauri::AppHandle) -> Result<crate::config::Config, String> {
-    helper::load_config(&app_handle)
+fn get_config(app_handle: tauri::AppHandle, path: Option<String>) -> Result<crate::config::Config, String> {
+    helper::load_config_with_override(&app_handle, path.as_deref())
 }
 
 #[tauri::command]

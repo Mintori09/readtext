@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { invoke } from "@tauri-apps/api/core";
+import { emit } from "@tauri-apps/api/event";
 import { Config } from "../../../types";
 
 export function useConfig() {
@@ -7,9 +8,9 @@ export function useConfig() {
     const [isSaving, setIsSaving] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
-    const loadConfig = useCallback(async () => {
+    const loadConfig = useCallback(async (path?: string) => {
         try {
-            const cfg = await invoke<Config>("get_config");
+            const cfg = await invoke<Config>("get_config", { path });
             setConfig(cfg);
             setError(null);
         } catch (e) {
@@ -27,6 +28,10 @@ export function useConfig() {
         try {
             await invoke("update_config", { config: configToSave });
             if (newConfig) setConfig(newConfig);
+
+            // Emit event for immediate application in other components
+            emit("config-updated", configToSave);
+
             setTimeout(() => setIsSaving(false), 500);
         } catch (e) {
             setError(`Failed to save config: ${e}`);

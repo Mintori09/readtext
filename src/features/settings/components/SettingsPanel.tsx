@@ -9,6 +9,27 @@ interface SettingsPanelProps {
 export const SettingsPanel = memo(({ theme }: SettingsPanelProps) => {
   const { config, setConfig, isSaving, error, saveConfig } = useConfig();
 
+  const handleWidthChange = (delta: number) => {
+    if (!config) return;
+
+    // Parse current width
+    const match = config.max_width.match(/^(\d+)(px|%)?$/);
+    if (!match) return;
+
+    const value = parseInt(match[1]);
+    const unit = match[2] || "px";
+
+    const newValue = Math.max(200, value + delta);
+    const newConfig = {
+      ...config,
+      max_width: `${newValue}${unit}`,
+    };
+
+    setConfig(newConfig);
+    // Save immediately for real-time application
+    saveConfig(newConfig);
+  };
+
   return (
     <div className="settings-panel" data-theme={theme}>
       <div className="panel-header">
@@ -94,6 +115,18 @@ export const SettingsPanel = memo(({ theme }: SettingsPanelProps) => {
                 />
                 <span>Auto-index images</span>
               </label>
+            </section>
+
+            <section className="settings-group">
+              <h4>Layout</h4>
+              <div className="setting-item" style={{ flexDirection: "column", alignItems: "flex-start", cursor: "default" }}>
+                <span>Max Width</span>
+                <div className="width-control">
+                  <button className="width-btn" onClick={() => handleWidthChange(-50)}>−</button>
+                  <div className="width-value">{config.max_width}</div>
+                  <button className="width-btn" onClick={() => handleWidthChange(50)}>+</button>
+                </div>
+              </div>
             </section>
 
             <section className="settings-group">

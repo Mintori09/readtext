@@ -6,6 +6,7 @@ import { MarkdownRenderer, MarkdownEditor, MarkdownEditorHandle, useZoom, useVim
 import { useTheme, useConfig } from "../../settings";
 import { useEffect, useRef, useState, useCallback } from "react";
 import { invoke } from "@tauri-apps/api/core";
+import { listen } from "@tauri-apps/api/event";
 
 
 export const MainWindow = ({
@@ -24,7 +25,7 @@ export const MainWindow = ({
   defaultActivePanel?: PanelType;
 }) => {
   useTheme();
-  const { config, saveConfig } = useConfig();
+  const { config, saveConfig, loadConfig } = useConfig();
   const scrollRef = useRef<HTMLDivElement>(null);
   const [activePanel, setActivePanel] = useState<PanelType>(defaultActivePanel || null);
   const [theme, setTheme] = useState<"light" | "dark">("light");
@@ -35,6 +36,49 @@ export const MainWindow = ({
       setTheme(config.theme);
     }
   }, [config?.theme]);
+
+  // Reload config when path changes to support local overrides
+  useEffect(() => {
+    if (currentPath) {
+      loadConfig(currentPath);
+    }
+  }, [currentPath, loadConfig]);
+
+  // Apply max-width to document
+  useEffect(() => {
+    if (config?.max_width) {
+      document.documentElement.style.setProperty(
+        "--user-max-width",
+        config.max_width
+      );
+    }
+  }, [config?.max_width]);
+
+  // Listen for live config updates from settings panel
+  useEffect(() => {
+    let unlisten: (() => void) | undefined;
+
+    const setupListener = async () => {
+      unlisten = await listen<any>("config-updated", (event) => {
+        // We can optionally refresh the local config state here
+        // If we want it to apply immediately, we need access to the config state of MainWindow
+        // Wait, MainWindow has its own useConfig state.
+        // We should update the CSS variable directly here for "immediate" effect
+        // or trigger a reload.
+        if (event.payload?.max_width) {
+          document.documentElement.style.setProperty(
+            "--user-max-width",
+            event.payload.max_width
+          );
+        }
+      });
+    };
+
+    setupListener();
+    return () => {
+      if (unlisten) unlisten();
+    };
+  }, []);
 
   // Apply theme to document
   useEffect(() => {
@@ -58,7 +102,7 @@ export const MainWindow = ({
   const [viewMode, setViewMode] = useState<ViewMode>("preview");
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [editContent, setEditContent] = useState(content);
-  
+
   const editorRef = useRef<MarkdownEditorHandle>(null);
   const isScrollingRef = useRef<"editor" | "preview" | null>(null);
   const syncTimeoutRef = useRef<number | null>(null);
@@ -109,25 +153,25 @@ export const MainWindow = ({
   const handleScroll = (e: React.UIEvent<HTMLElement>) => {
     // 1. Handle Sync in Split Mode
     if (viewMode === "split" && isScrollingRef.current !== "editor") {
-        isScrollingRef.current = "preview";
-        
-        const { scrollTop, scrollHeight, clientHeight } = e.currentTarget;
-        const percent = (scrollTop / (scrollHeight - clientHeight)) * 100;
-        
-        if (editorRef.current) {
-            // Optimize with rAF to prevent jank
-            requestAnimationFrame(() => {
-                editorRef.current?.scrollToPercent(percent);
-            });
-        }
+      isScrollingRef.current = "preview";
 
-        // Debounce lock release to prevent feedback loop during continuous scroll
-        if (syncTimeoutRef.current) clearTimeout(syncTimeoutRef.current);
-        syncTimeoutRef.current = window.setTimeout(() => {
-            if (isScrollingRef.current === "preview") isScrollingRef.current = null;
-        }, 100);
+      const { scrollTop, scrollHeight, clientHeight } = e.currentTarget;
+      const percent = (scrollTop / (scrollHeight - clientHeight)) * 100;
+
+      if (editorRef.current) {
+        // Optimize with rAF to prevent jank
+        requestAnimationFrame(() => {
+          editorRef.current?.scrollToPercent(percent);
+        });
+      }
+
+      // Debounce lock release to prevent feedback loop during continuous scroll
+      if (syncTimeoutRef.current) clearTimeout(syncTimeoutRef.current);
+      syncTimeoutRef.current = window.setTimeout(() => {
+        if (isScrollingRef.current === "preview") isScrollingRef.current = null;
+      }, 100);
     }
-    
+
     // 2. Handle Scroll Saving (existing logic)
     if (!currentPath) return;
     const scrollTop = e.currentTarget.scrollTop;
@@ -146,23 +190,23 @@ export const MainWindow = ({
 
   const handleEditorScroll = useCallback((percent: number) => {
     if (viewMode === "split" && isScrollingRef.current !== "preview") {
-        isScrollingRef.current = "editor";
-        
-        if (scrollRef.current) {
-            const { scrollHeight, clientHeight } = scrollRef.current;
-            const scrollTop = (scrollHeight - clientHeight) * (percent / 100);
-            
-            // Optimize with rAF
-            requestAnimationFrame(() => {
-                scrollRef.current?.scrollTo({ top: scrollTop, behavior: "instant" });
-            });
-        }
+      isScrollingRef.current = "editor";
 
-        // Debounce lock release
-        if (syncTimeoutRef.current) clearTimeout(syncTimeoutRef.current);
-        syncTimeoutRef.current = window.setTimeout(() => {
-            if (isScrollingRef.current === "editor") isScrollingRef.current = null;
-        }, 100);
+      if (scrollRef.current) {
+        const { scrollHeight, clientHeight } = scrollRef.current;
+        const scrollTop = (scrollHeight - clientHeight) * (percent / 100);
+
+        // Optimize with rAF
+        requestAnimationFrame(() => {
+          scrollRef.current?.scrollTo({ top: scrollTop, behavior: "instant" });
+        });
+      }
+
+      // Debounce lock release
+      if (syncTimeoutRef.current) clearTimeout(syncTimeoutRef.current);
+      syncTimeoutRef.current = window.setTimeout(() => {
+        if (isScrollingRef.current === "editor") isScrollingRef.current = null;
+      }, 100);
     }
   }, [viewMode]);
 
@@ -178,7 +222,7 @@ export const MainWindow = ({
 
   const handleSave = useCallback(async () => {
     if (!currentPath || !hasUnsavedChanges) return;
-    
+
     try {
       await invoke("save_file", { path: currentPath, content: editContent });
       setHasUnsavedChanges(false);
@@ -192,15 +236,15 @@ export const MainWindow = ({
   // Initial Sync when switching to Split Mode
   useEffect(() => {
     if (viewMode === "split") {
-        // Give time for layout to settle
-        setTimeout(() => {
-            const percent = editorRef.current?.getScrollPercent() || 0;
-            if (scrollRef.current) {
-                const { scrollHeight, clientHeight } = scrollRef.current;
-                const scrollTop = (scrollHeight - clientHeight) * (percent / 100);
-                scrollRef.current.scrollTo({ top: scrollTop, behavior: "instant" });
-            }
-        }, 100);
+      // Give time for layout to settle
+      setTimeout(() => {
+        const percent = editorRef.current?.getScrollPercent() || 0;
+        if (scrollRef.current) {
+          const { scrollHeight, clientHeight } = scrollRef.current;
+          const scrollTop = (scrollHeight - clientHeight) * (percent / 100);
+          scrollRef.current.scrollTo({ top: scrollTop, behavior: "instant" });
+        }
+      }, 100);
     }
   }, [viewMode]);
 
@@ -234,8 +278,8 @@ export const MainWindow = ({
 
   return (
     <div className={`main-layout ${activePanel ? "sidebar-open" : ""}`}>
-      <ActivityBar 
-        activePanel={activePanel} 
+      <ActivityBar
+        activePanel={activePanel}
         onPanelChange={setActivePanel}
         viewMode={viewMode}
         onViewModeChange={setViewMode}
@@ -244,7 +288,7 @@ export const MainWindow = ({
         theme={theme}
         onThemeToggle={handleThemeToggle}
       />
-      
+
       <Sidebar
         content={showPreview ? editContent : content}
         scrollRef={scrollRef}
@@ -271,7 +315,7 @@ export const MainWindow = ({
         )}
 
         {showPreview && (
-            <main
+          <main
             ref={scrollRef}
             className="content-area scrollable-content preview-pane main-preview-pane"
             onScroll={handleScroll}
