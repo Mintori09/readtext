@@ -239,3 +239,32 @@
 .width-btn:active {
   transform: translateY(1px);
 }
+
+/* ── Auto-save delay input ───────────────────────── */
+.setting-item--indent {
+  padding-left: 24px;
+  cursor: default;
+}
+
+.autosave-delay-input {
+  width: 72px;
+  padding: 3px 6px;
+  background: var(--bg-item-hover);
+  border: 1px solid var(--border-panel);
+  border-radius: 3px;
+  color: var(--text-main);
+  font-size: 12px;
+  font-family: var(--font-mono);
+  text-align: right;
+  appearance: textfield;
+}
+
+.autosave-delay-input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.autosave-delay-input::-webkit-inner-spin-button,
+.autosave-delay-input::-webkit-outer-spin-button {
+  opacity: 1;
+}

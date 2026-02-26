@@ -115,6 +115,48 @@ export const SettingsPanel = memo(({ theme }: SettingsPanelProps) => {
                 />
                 <span>Auto-index images</span>
               </label>
+
+              <label className="setting-item">
+                <input
+                  type="checkbox"
+                  checked={config.features.auto_save}
+                  onChange={(e) => {
+                    const newConfig = {
+                      ...config,
+                      features: {
+                        ...config.features,
+                        auto_save: e.target.checked,
+                      },
+                    };
+                    setConfig(newConfig);
+                    saveConfig(newConfig);
+                  }}
+                />
+                <span>Auto-save</span>
+              </label>
+
+              {config.features.auto_save && (
+                <div className="setting-item setting-item--indent">
+                  <span>Delay (ms)</span>
+                  <input
+                    type="number"
+                    className="autosave-delay-input"
+                    min={100}
+                    max={10000}
+                    step={100}
+                    value={config.features.auto_save_delay}
+                    onChange={(e) => {
+                      const delay = Math.min(10000, Math.max(100, Number(e.target.value)));
+                      const newConfig = {
+                        ...config,
+                        features: { ...config.features, auto_save_delay: delay },
+                      };
+                      setConfig(newConfig);
+                    }}
+                    onBlur={() => saveConfig(config)}
+                  />
+                </div>
+              )}
             </section>
 
             <section className="settings-group">

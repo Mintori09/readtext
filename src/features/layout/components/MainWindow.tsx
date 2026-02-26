@@ -2,7 +2,7 @@ import { Sidebar } from "./Sidebar";
 import { ActivityBar } from "./ActivityBar";
 import "../styles/layout.css";
 import { PanelType, ViewMode } from "../../../types";
-import { MarkdownRenderer, MarkdownEditor, MarkdownEditorHandle, useZoom, useVim } from "../../editor";
+import { MarkdownRenderer, MarkdownEditor, MarkdownEditorHandle, useZoom, useVim, useAutoSave } from "../../editor";
 import { useTheme, useConfig } from "../../settings";
 import { useEffect, useRef, useState, useCallback } from "react";
 import { invoke } from "@tauri-apps/api/core";
@@ -102,6 +102,9 @@ export const MainWindow = ({
   const [viewMode, setViewMode] = useState<ViewMode>("preview");
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [editContent, setEditContent] = useState(content);
+  // Track what was last persisted to disk so useAutoSave can detect real changes
+  const savedContentRef = useRef(content);
+  const [savedContent, setSavedContent] = useState(content);
 
   const editorRef = useRef<MarkdownEditorHandle>(null);
   const isScrollingRef = useRef<"editor" | "preview" | null>(null);
@@ -119,6 +122,8 @@ export const MainWindow = ({
   // Sync editContent with loaded content
   useEffect(() => {
     setEditContent(content);
+    setSavedContent(content);
+    savedContentRef.current = content;
     setHasUnsavedChanges(false);
   }, [content]);
 
@@ -225,11 +230,25 @@ export const MainWindow = ({
 
     try {
       await invoke("save_file", { path: currentPath, content: editContent });
+      setSavedContent(editContent);
+      savedContentRef.current = editContent;
       setHasUnsavedChanges(false);
     } catch (err) {
       console.error("Failed to save file:", err);
     }
   }, [currentPath, editContent, hasUnsavedChanges]);
+
+  // Auto-save hook
+  const autoSaveEnabled = config?.features.auto_save ?? false;
+  const autoSaveDelay = config?.features.auto_save_delay ?? 1000;
+  const { isSaving: isAutoSaving, lastSaved } = useAutoSave(
+    editContent,
+    savedContent,
+    currentPath,
+    autoSaveEnabled,
+    autoSaveDelay,
+    handleSave,
+  );
 
 
 
@@ -287,6 +306,8 @@ export const MainWindow = ({
         onSave={handleSave}
         theme={theme}
         onThemeToggle={handleThemeToggle}
+        isAutoSaving={isAutoSaving}
+        lastSaved={lastSaved}
       />
 
       <Sidebar

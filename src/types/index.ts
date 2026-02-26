@@ -18,6 +18,8 @@ export interface Config {
         vim_navigation: boolean;
         live_reload: boolean;
         auto_index: boolean;
+        auto_save: boolean;
+        auto_save_delay: number;
     };
     theme: "light" | "dark";
     max_width: string;

@@ -147,3 +147,43 @@
     overflow-y: auto;
     min-width: 0;
 }
+
+/* ── Auto-save status badge ─────────────────────── */
+.autosave-status {
+    cursor: default;
+    pointer-events: none;
+    color: var(--text-panel-muted);
+}
+
+/* Spinning ring while saving */
+.autosave-spinner {
+    display: block;
+    width: 14px;
+    height: 14px;
+    border: 2px solid transparent;
+    border-top-color: #e9a700;
+    border-radius: 50%;
+    animation: autosave-spin 0.7s linear infinite;
+}
+
+@keyframes autosave-spin {
+    to { transform: rotate(360deg); }
+}
+
+/* Green checkmark after save */
+.autosave-done {
+    color: #89d185;
+    animation: autosave-fade 3s ease forwards;
+}
+
+.autosave-check {
+    font-size: 18px;
+    line-height: 1;
+}
+
+@keyframes autosave-fade {
+    0%   { opacity: 1; }
+    70%  { opacity: 1; }
+    100% { opacity: 0; }
+}
+

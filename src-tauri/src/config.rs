@@ -34,6 +34,12 @@ pub struct Features {
 
     #[serde(default = "default_true")]
     pub auto_index: bool,
+
+    #[serde(default)]
+    pub auto_save: bool,
+
+    #[serde(default = "default_auto_save_delay")]
+    pub auto_save_delay: u32,
 }
 
 impl Default for Config {
@@ -62,6 +68,8 @@ impl Default for Features {
             vim_navigation: true,
             live_reload: true,
             auto_index: true,
+            auto_save: false,
+            auto_save_delay: default_auto_save_delay(),
         }
     }
 }
@@ -72,6 +80,10 @@ fn default_search_paths() -> Vec<String> {
 
 fn default_true() -> bool {
     true
+}
+
+fn default_auto_save_delay() -> u32 {
+    1000
 }
 
 fn default_max_width() -> String {

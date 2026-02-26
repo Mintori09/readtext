@@ -1,13 +1,14 @@
+import { useState, useEffect } from "react";
 import "../../../styles/activitybar.css";
 import { ViewMode, PanelType } from "../../../types";
-import { 
-  ExplorerIcon, 
-  OutlineIcon, 
-  SearchIcon, 
-  SettingsIcon, 
-  PreviewIcon, 
-  EditIcon, 
-  SplitIcon, 
+import {
+  ExplorerIcon,
+  OutlineIcon,
+  SearchIcon,
+  SettingsIcon,
+  PreviewIcon,
+  EditIcon,
+  SplitIcon,
   SaveIcon,
   SunIcon,
   MoonIcon
@@ -22,6 +23,8 @@ interface ActivityBarProps {
   onSave?: () => void;
   theme: "light" | "dark";
   onThemeToggle: () => void;
+  isAutoSaving?: boolean;
+  lastSaved?: Date | null;
 }
 
 interface ActivityItem {
@@ -37,8 +40,8 @@ const activityItems: ActivityItem[] = [
   { id: "settings", icon: <SettingsIcon />, title: "Settings" },
 ];
 
-export const ActivityBar = ({ 
-  activePanel, 
+export const ActivityBar = ({
+  activePanel,
   onPanelChange,
   viewMode = "preview",
   onViewModeChange,
@@ -46,7 +49,19 @@ export const ActivityBar = ({
   onSave,
   theme,
   onThemeToggle,
+  isAutoSaving = false,
+  lastSaved = null,
 }: ActivityBarProps) => {
+  const [showSaved, setShowSaved] = useState(false);
+
+  // Show "Saved ✓" badge briefly after a successful auto-save
+  useEffect(() => {
+    if (!lastSaved) return;
+    setShowSaved(true);
+    const timer = window.setTimeout(() => setShowSaved(false), 3000);
+    return () => window.clearTimeout(timer);
+  }, [lastSaved]);
+
   const handleClick = (panelId: PanelType) => {
     if (activePanel === panelId) {
       onPanelChange(null);
@@ -70,10 +85,10 @@ export const ActivityBar = ({
             {activePanel === item.id && <div className="activity-bar-indicator" />}
           </button>
         ))}
-        
+
         {/* Separator */}
         <div className="activity-bar-separator" />
-        
+
         {/* View Mode Controls */}
         <button
           className={`activity-bar-item ${viewMode === "preview" ? "active" : ""}`}
@@ -84,7 +99,7 @@ export const ActivityBar = ({
           <PreviewIcon />
           {viewMode === "preview" && <div className="activity-bar-indicator" />}
         </button>
-        
+
         <button
           className={`activity-bar-item ${viewMode === "edit" ? "active" : ""}`}
           onClick={() => onViewModeChange?.("edit")}
@@ -94,7 +109,7 @@ export const ActivityBar = ({
           <EditIcon />
           {viewMode === "edit" && <div className="activity-bar-indicator" />}
         </button>
-        
+
         <button
           className={`activity-bar-item ${viewMode === "split" ? "active" : ""}`}
           onClick={() => onViewModeChange?.("split")}
@@ -105,8 +120,20 @@ export const ActivityBar = ({
           {viewMode === "split" && <div className="activity-bar-indicator" />}
         </button>
       </div>
-      
+
       <div className="activity-bar-bottom">
+        {/* Auto-save status badge */}
+        {isAutoSaving && (
+          <div className="activity-bar-item autosave-status autosave-saving" title="Auto-saving…">
+            <span className="autosave-spinner" />
+          </div>
+        )}
+        {!isAutoSaving && showSaved && (
+          <div className="activity-bar-item autosave-status autosave-done" title="Auto-saved">
+            <span className="autosave-check">✓</span>
+          </div>
+        )}
+
         {/* Save button (only show when there are unsaved changes) */}
         {hasUnsavedChanges && (
           <button
@@ -128,7 +155,7 @@ export const ActivityBar = ({
         >
           {theme === "light" ? <MoonIcon /> : <SunIcon />}
         </button>
-        
+
         <button
           className={`activity-bar-item ${activePanel === "settings" ? "active" : ""}`}
           onClick={() => handleClick("settings")}
