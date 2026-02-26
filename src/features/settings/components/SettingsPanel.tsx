@@ -85,6 +85,25 @@ export const SettingsPanel = memo(({ theme }: SettingsPanelProps) => {
               <label className="setting-item">
                 <input
                   type="checkbox"
+                  checked={config.features.vim_mode}
+                  onChange={(e) => {
+                    const newConfig = {
+                      ...config,
+                      features: {
+                        ...config.features,
+                        vim_mode: e.target.checked,
+                      },
+                    };
+                    setConfig(newConfig);
+                    saveConfig(newConfig);
+                  }}
+                />
+                <span>Vim mode (edit)</span>
+              </label>
+
+              <label className="setting-item">
+                <input
+                  type="checkbox"
                   checked={config.features.live_reload}
                   onChange={(e) =>
                     setConfig({

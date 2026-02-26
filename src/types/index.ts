@@ -16,6 +16,7 @@ export interface Config {
     };
     features: {
         vim_navigation: boolean;
+        vim_mode: boolean;
         live_reload: boolean;
         auto_index: boolean;
         auto_save: boolean;

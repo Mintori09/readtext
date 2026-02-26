@@ -5,6 +5,7 @@ import {
   forwardRef,
   useImperativeHandle,
   useMemo,
+  useState,
 } from "react";
 import {
   EditorView,
@@ -21,6 +22,7 @@ import {
   syntaxHighlighting,
   defaultHighlightStyle,
 } from "@codemirror/language";
+import { vim, getCM, CodeMirrorV } from "@replit/codemirror-vim";
 import { ViewMode } from "../../../types";
 import "../styles/editor.css";
 
@@ -36,6 +38,7 @@ interface MarkdownEditorProps {
   viewMode?: ViewMode;
   onScroll?: (percent: number) => void;
   theme?: "light" | "dark";
+  vimEnabled?: boolean;
 }
 
 // Base layout theme
@@ -114,13 +117,15 @@ const lightTheme = EditorView.theme({
 export const MarkdownEditor = memo(
   forwardRef<MarkdownEditorHandle, MarkdownEditorProps>(
     (
-      { content, onChange, onSave, viewMode, onScroll, theme = "dark" },
+      { content, onChange, onSave, viewMode, onScroll, theme = "dark", vimEnabled = false },
       ref,
     ) => {
       const containerRef = useRef<HTMLDivElement>(null);
       const viewRef = useRef<EditorView | null>(null);
       const isExternalUpdate = useRef(false);
       const themeCompartment = useRef(new Compartment());
+      const vimCompartment = useRef(new Compartment());
+      const [vimMode, setVimMode] = useState<string>("normal");
 
       useImperativeHandle(ref, () => ({
         scrollToPercent: (percent: number) => {
@@ -155,6 +160,33 @@ export const MarkdownEditor = memo(
         [onSave],
       );
 
+      // Auto-focus editor when entering edit/split mode
+      useEffect(() => {
+        if (viewMode === "edit" || viewMode === "split") {
+          // Small delay to ensure the DOM is ready after mode switch
+          const timer = setTimeout(() => {
+            viewRef.current?.focus();
+          }, 50);
+          return () => clearTimeout(timer);
+        }
+      }, [viewMode]);
+
+      // Poll vim mode from CodeMirror-Vim state
+      useEffect(() => {
+        if (!vimEnabled) return;
+
+        const intervalId = setInterval(() => {
+          const view = viewRef.current;
+          if (!view) return;
+          const cm = getCM(view) as CodeMirrorV | null;
+          if (!cm) return;
+          const mode: string = cm.state.vim?.mode ?? "normal";
+          setVimMode(mode);
+        }, 100);
+
+        return () => clearInterval(intervalId);
+      }, [vimEnabled]);
+
       // Create editor on mount
       useEffect(() => {
         if (!containerRef.current) return;
@@ -174,6 +206,7 @@ export const MarkdownEditor = memo(
           syntaxHighlighting(defaultHighlightStyle),
           layoutTheme,
           themeCompartment.current.of(initialThemeExtensions),
+          vimCompartment.current.of(vimEnabled ? [vim()] : []),
           keymap.of([...defaultKeymap, ...historyKeymap]),
           saveKeymap,
           EditorView.updateListener.of((update) => {
@@ -227,6 +260,19 @@ export const MarkdownEditor = memo(
         });
       }, [theme, viewMode]);
 
+      // Dynamic Vim Toggle
+      useEffect(() => {
+        if (!viewRef.current) return;
+
+        viewRef.current.dispatch({
+          effects: vimCompartment.current.reconfigure(vimEnabled ? [vim()] : []),
+        });
+
+        if (!vimEnabled) {
+          setVimMode("normal");
+        }
+      }, [vimEnabled]);
+
       // Update content changes
       useEffect(() => {
         if (!viewRef.current) return;
@@ -246,10 +292,17 @@ export const MarkdownEditor = memo(
       }, [content]);
 
       return (
-        <div
-          ref={containerRef}
-          className="markdown-editor markdown-editor-container"
-        />
+        <div className="markdown-editor-wrapper">
+          <div
+            ref={containerRef}
+            className="markdown-editor markdown-editor-container"
+          />
+          {vimEnabled && (
+            <div className={`vim-mode-indicator vim-mode-indicator--${vimMode}`}>
+              {vimMode.toUpperCase()}
+            </div>
+          )}
+        </div>
       );
     },
   ),

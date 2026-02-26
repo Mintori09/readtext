@@ -29,6 +29,9 @@ pub struct Features {
     #[serde(default = "default_true")]
     pub vim_navigation: bool,
 
+    #[serde(default)]
+    pub vim_mode: bool,
+
     #[serde(default = "default_true")]
     pub live_reload: bool,
 
@@ -66,6 +69,7 @@ impl Default for Features {
     fn default() -> Self {
         Self {
             vim_navigation: true,
+            vim_mode: false,
             live_reload: true,
             auto_index: true,
             auto_save: false,

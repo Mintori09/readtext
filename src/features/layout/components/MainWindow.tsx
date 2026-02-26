@@ -331,6 +331,7 @@ export const MainWindow = ({
               viewMode={viewMode}
               onScroll={handleEditorScroll}
               theme={theme}
+              vimEnabled={config?.features.vim_mode ?? false}
             />
           </div>
         )}

@@ -3,3 +3,69 @@
     background-color: var(--bg-color);
     overflow: hidden;
 }
+
+.markdown-editor-wrapper {
+    position: relative;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+.markdown-editor-wrapper .markdown-editor-container {
+    flex: 1;
+    min-height: 0;
+}
+
+/* Vim mode indicator badge */
+.vim-mode-indicator {
+    position: absolute;
+    bottom: 8px;
+    right: 12px;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 700;
+    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    letter-spacing: 0.08em;
+    pointer-events: none;
+    z-index: 10;
+    opacity: 0.85;
+    transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.vim-mode-indicator--normal {
+    background-color: #264f78;
+    color: #9cdcfe;
+    border: 1px solid #3a6ea8;
+}
+
+.vim-mode-indicator--insert {
+    background-color: #1e4620;
+    color: #89d185;
+    border: 1px solid #2d6b30;
+}
+
+.vim-mode-indicator--visual {
+    background-color: #5a3e1b;
+    color: #f0a05a;
+    border: 1px solid #7a5425;
+}
+
+/* Light theme overrides */
+[data-theme="light"] .vim-mode-indicator--normal {
+    background-color: #ddeeff;
+    color: #0055aa;
+    border: 1px solid #99bbdd;
+}
+
+[data-theme="light"] .vim-mode-indicator--insert {
+    background-color: #ddffdd;
+    color: #226622;
+    border: 1px solid #99cc99;
+}
+
+[data-theme="light"] .vim-mode-indicator--visual {
+    background-color: #fff0dd;
+    color: #884400;
+    border: 1px solid #ddaa77;
+}
