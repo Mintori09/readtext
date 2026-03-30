@@ -104,10 +104,11 @@ fn is_image_file(path: &Path) -> bool {
 
 fn fetch_path_from_db(connection: &Connection, file_name: &str) -> Option<String> {
     let decode_name = decode(file_name).unwrap_or(std::borrow::Cow::Borrowed(file_name));
+    let search_pattern = format!("%{}", decode_name);
+    let sql = "SELECT full_path FROM image_index WHERE full_path LIKE ? LIMIT 1";
 
-    let sql = "SELECT full_path FROM image_index WHERE file_name = ?1 LIMIT 1";
     connection
-        .query_row(sql, params![decode_name.as_ref()], |row| row.get(0))
+        .query_row(sql, [search_pattern], |row| row.get(0))
         .ok()
 }
 
